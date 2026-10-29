@@ -181,3 +181,12 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - Rückfallverzeichnis: /opt/okey-before-01fb4d8-20261029T141309Z
 - Laufende Okey-Partien durch Dienstneustart beendet. Punkte leben weiterhin
   im Prozessspeicher. Nicht verwendbare Joker zählen vorläufig 0 Punkte.
+
+29.10.2026 — Lesbarkeit und bewusste Rundenauswahl live (144b3a9)
+- Grössere Spieltexte, Beschriftungen und Dialoge.
+- Sichtbare 5/7-Auswahl ohne Vorauswahl; Server verweigert ersten Start
+  ohne bestätigte Rundenzahl. Wahl gilt für die gesamte Partie.
+- 43 Tests lokal/VPS, DOM-Integration inklusive verweigertem Frühstart.
+- HTTPS app.js/style.css hashgleich geprüft; okey und gamebot aktiv.
+- sudo-Sperre nach Installation wiederhergestellt.
+- Rückfallverzeichnis: /opt/okey-before-144b3a9-20261029T142420Z
