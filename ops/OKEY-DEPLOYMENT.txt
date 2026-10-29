@@ -165,3 +165,19 @@ Grössere Gegnerabwürfe:
 Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - Gemeinsames Zeitbudget für Ziehen und Abwerfen, Regeln und README angepasst.
 - 32 Tests lokal/remote bestanden. Dienst neu gestartet und aktiv; öffentliche app.js hashgleich.
+
+29.10.2026 — Gruppenstart und Team-Partien live (Source-Commit 01fb4d8)
+- /nisja in Gruppen erstellt eine gemeinsame Lobby mit startapp-Einladung.
+- 5/7 Runden, Teams auf gegenüberliegenden Plätzen oder Einzelwertung.
+- Exakte minimale Restpunkte, Joker-Abschluss -10 / Gegner doppelt,
+  Punktetabelle, Sortierung Farbe/Kombis, neue Steine zwei Sekunden markiert.
+- Buttons Mshile und Fuge gjurin; Joker-Abschluss mit Tischanimation.
+- 43 Tests lokal und auf VPS bestanden; DOM-Integration mit echtem HTTP/WS.
+- Visueller Browsertest in Cloud durch gesperrten Browser-Download nicht möglich.
+- Deployment via Remote Desktop Commander auf ov-c992dc mit Nutzerfreigabe.
+  sudo-Sperre danach wiederhergestellt. Okey und gamebot aktiv.
+- HTTPS-Dateien app.js, combinations.js, index.html, style.css, rack.js
+  mit deployten Dateien per SHA-256 verglichen; /okey/healthz erfolgreich.
+- Rückfallverzeichnis: /opt/okey-before-01fb4d8-20261029T141309Z
+- Laufende Okey-Partien durch Dienstneustart beendet. Punkte leben weiterhin
+  im Prozessspeicher. Nicht verwendbare Joker zählen vorläufig 0 Punkte.
