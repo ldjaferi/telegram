@@ -137,6 +137,11 @@ export class FreeRack {
   }
   save(){try{sessionStorage.setItem('okey-rack:'+this.key,JSON.stringify({key:this.key,positions:this.positions,bounds:this.lastBounds}))}catch{}}
   reset(){this.positions={};this.save()}
+  arrange(groups){
+    this.cancel(); const b=this.bounds(); let index=0;
+    const units=groups.filter(g=>g.length).map(group=>{const start=index;index+=group.length;return {ids:group.map(t=>t.id),row:start<Math.ceil(this.hand.length/2)?0:1,x:(start%Math.ceil(this.hand.length/2))*(b.tw+SEPARATION)}});
+    this.positions=pack(units,{},b);this.lastBounds=b;this.paint(this.positions,b);this.save();
+  }
   bounds(){const t=this.layer.querySelector('.tile');const tw=t?.offsetWidth||32,th=t?.offsetHeight||44;return{tw,th,w:Math.max(1,this.layer.clientWidth-tw),h:Math.max(1,this.layer.clientHeight-th)}}
   render(hand,interactive){this.hand=hand;this.interactive=interactive;if(this.drag)return;this.layer.innerHTML=hand.map(t=>this.markup(t,interactive)).join('');this.place()}
   place(){if(this.drag||!this.hand.length||!this.layer.clientWidth||!this.layer.clientHeight)return;const slots=Math.max(8,Math.ceil(this.hand.length/2));this.layer.style.setProperty('--rack-fit-width',Math.floor((this.layer.clientWidth-(slots-1)*GAP)/slots)+'px');this.layer.style.setProperty('--rack-fit-height',Math.floor((this.layer.clientHeight-GAP)/2)+'px');const b=this.bounds();this.positions=settleRack(this.hand,this.positions,b,this.lastBounds||b);this.lastBounds=b;this.paint(this.positions,b);this.save()}

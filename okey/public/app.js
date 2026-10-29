@@ -1,3 +1,4 @@
+import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
 import { TableMusic, shishaBubbles } from './music.js';
 import { FreeRack } from './rack.js';
@@ -13,6 +14,7 @@ const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
 const gestureArt = { finger: '🖕', nose: '👃👋', fart: '💨', tea: '☕' };
 const gestureCopy = { finger: 'sendet liebe Grüsse', nose: 'macht eine lange Nase', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
 let room = null, user = null, socket = null, config = null, selected = null, order = [], target = null, lastEvent = 0, roomCode = null, connected = false, reconnectTimer, toastTimer, eventTimer, serverOffset = 0;
+let newTileId = null, newTileKey = '', newTileTimer, jokerTimer;
 let muted = localStorage.getItem('okey-muted') === 'true', audio, music;
 let audioUnlocked = false, suppressClickUntil = 0;
 const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); } });
@@ -53,7 +55,7 @@ const demoHand = [
 const me = () => room?.players.find(p => p.id === user?.id);
 const myTurn = () => connected && room?.status === 'playing' && !me()?.out && room.players[room.turn]?.id === user?.id;
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 3800); }
-function modal(html) { $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
+function modal(html) { $('#modal-content').dataset.view = ''; $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
 $('#close-modal').onclick = () => $('#modal').close();
 $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) { const r = $('#modal').getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $('#modal').close(); } });
 
@@ -92,7 +94,7 @@ $('#sound').onclick = () => { muted = !muted; localStorage.setItem('okey-muted',
 function tileMarkup(tile, interactive = false) {
   const wild = tile.joker === true, v = tile;
   const label = wild ? 'Joker, frei einsetzbar' : `${colors[v.color]} ${v.number}`;
-  return `<${interactive ? 'button' : 'span'} class="tile c${wild ? 0 : v.color}${wild ? ' joker' : ''}${tile.id === selected ? ' selected' : ''}" ${interactive ? `data-tile="${esc(tile.id)}" draggable="false" aria-pressed="${tile.id === selected}"` : ''} title="${esc(label)}" aria-label="${esc(label)}">${wild ? '<img src="art.svg" alt="Comic-Brust als Joker"><span class="tile-tag">JOKER</span>' : `<span class="number">${v.number}</span><span class="pip">${['◆', '●', '▲', '♠'][v.color]}</span>`}</${interactive ? 'button' : 'span'}>`;
+  return `<${interactive ? 'button' : 'span'} class="tile c${wild ? 0 : v.color}${wild ? ' joker' : ''}${tile.id === selected ? ' selected' : ''}${interactive && tile.id === newTileId ? ' newly-drawn' : ''}" ${interactive ? `data-tile="${esc(tile.id)}" draggable="false" aria-pressed="${tile.id === selected}"` : ''} title="${esc(label)}" aria-label="${esc(label)}">${interactive && tile.id === newTileId ? '<small class="new-tile-badge">NEU</small>' : ''}${wild ? '<img src="art.svg" alt="Comic-Brust als Joker"><span class="tile-tag">JOKER</span>' : `<span class="number">${v.number}</span><span class="pip">${['◆', '●', '▲', '♠'][v.color]}</span>`}</${interactive ? 'button' : 'span'}>`;
 }
 function send(type, data = {}) {
   if (socket?.readyState !== WebSocket.OPEN) return toast('Die Verbindung wird gerade wiederhergestellt.');
@@ -122,6 +124,7 @@ async function connect() {
         const next = message.room;
         if (next?.code !== roomCode) { roomCode = next?.code; lastEvent = next?.events.at(-1)?.seq || 0; order = []; selected = null; target = null; clearSmoke(); $('#ambient-smoke').replaceChildren(); }
         if (next?.round !== room?.round) { order = []; selected = null; $('#rack').classList.remove('thrown'); }
+        markDraw(next);
         room = next;
         if (room) serverOffset = room.serverNow - Date.now();
         render();
@@ -159,7 +162,7 @@ function renderSeats() {
     const p = room?.players[seatIndex] || (!room ? { name: ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'][offset - 1], bot: true, count: 14, preview: true } : null);
     const seat = $(`#seat-${position}`);
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
-    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)} als Ziel für Gesten wählen" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)} als Ziel für Gesten wählen" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}${room?.mode === 'teams' ? ` · Team ${p.team === 0 ? 'A' : 'B'}` : ''}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
 }
 function renderCenter() {
@@ -168,12 +171,12 @@ function renderCenter() {
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="start">Runde starten →</button>' : ''}</div>`;
+    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">Partie einstellen & starten →</button>' : ''}<span class="match-settings-summary">${room.roundLimit} Runden · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {
     const result = room.result;
-    $('#center').innerHTML = `<p class="result-title">${result.winner ? result.winner === user.id ? 'Okey, Champion!' : `${esc(result.name)} gewinnt!` : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Das letzte Brett am Tisch gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Unentschieden. Zeit für frischen Çay.' : result.joker ? 'Mit Joker abgeworfen. Respekt.' : 'Gute Hand. Grosse Klappe.'}</p><div class="welcome-buttons">${room.owner === user.id ? '<button class="button primary" data-action="start">Revanche! ↻</button>' : '<span class="welcome-sub">Warte auf die Revanche.</span>'}${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    $('#center').innerHTML = `<p class="result-title">${room.matchComplete ? matchTitle() : result.winner ? result.winner === user.id ? 'Okey, Champion!' : `${esc(result.name)} gewinnt!` : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Die letzte verbliebene Seite gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Vorrat leer. Restpunkte zählen für alle.' : result.joker ? 'JOKER-MSHILE! −10 für die Gewinner, doppelte Gegnerpunkte.' : 'Gute Hand. Grosse Klappe.'}</p><div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
     return;
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
@@ -186,10 +189,10 @@ function renderRack() {
   for (const tile of hand) if (!order.includes(tile.id)) order.push(tile.id);
   if (!hand.some(t => t.id === selected)) selected = null;
   const sorted = order.map(id => hand.find(t => t.id === id));
-  freeRack.context(`${room?.code || 'demo'}:${room?.round || 0}`);
+  freeRack.context(`${room?.code || 'demo'}:${room?.matchNumber || 1}:${room?.round || 0}`);
   freeRack.render(sorted, Boolean(room?.round));
   if (room?.status !== 'playing' || !me()?.out) $('#rack').classList.remove('thrown');
-  $('#sort').disabled = !hand.length;
+  $('#sort').disabled = !hand.length; $('#sort-combinations').disabled = !hand.length;
   renderActions();
 }
 function renderActions() {
@@ -197,7 +200,7 @@ function renderActions() {
   $('#discard').disabled = !canDiscard; $('#claim').disabled = !canDiscard;
   $('#throw').disabled = !connected || room?.status !== 'playing' || me()?.out;
   $('#leave').hidden = !room;
-  $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Okey!“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
+  $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Mshile“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
   for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room;
   renderBluff();
   renderShisha();
@@ -223,11 +226,13 @@ function render() {
   document.body.classList.toggle('in-game', Boolean(room));
   document.body.dataset.stage = room?.status || 'welcome';
   renderSeats(); renderCenter(); renderRack(); syncMusic();
-  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'}</div>` : 'OKEY · FESTE JOKER <span>•</span> 4 PLÄTZE';
+  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'OKEY · FESTE JOKER <span>•</span> 4 PLÄTZE';
   $('#round-pill').textContent = !room ? 'DEIN LIEBLINGSTISCH IST FREI.' : room.status === 'lobby' ? room.owner === user.id ? 'FREIE PLÄTZE ÜBERNEHMEN COMPUTER.' : 'DER GASTGEBER STARTET DIE RUNDE.' : room.status === 'finished' ? 'DIE NÄCHSTE RUNDE WIRD PERSÖNLICH.' : me()?.out ? 'DU SCHAUST ZU. DIE ANDEREN SPIELEN WEITER.' : myTurn() ? room.phase === 'draw' ? 'DU BIST DRAN · ZIEH EINEN STEIN.' : 'DU BIST DRAN · WIRF EINEN STEIN AB.' : `${room.players[room.turn]?.name.toUpperCase()} IST DRAN.`;
-  $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}` : 'DEIN BRETT'}`;
+  $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}${room.mode === 'teams' ? ` · TEAM ${me()?.team === 0 ? 'A' : 'B'}` : ''}` : 'DEIN BRETT'}`;
   $('#target-label').textContent = target && room?.players.some(p => p.id === target) ? `An ${room.players.find(p => p.id === target).name} · Avatar zum Abwählen` : 'An den ganzen Tisch';
   renderClock();
+  $('#scores-button').disabled = !room;
+  if ($('#modal').open && $('#modal-content').dataset.view === 'scores') showScores();
 }
 function renderClock() {
   renderBluff();
@@ -268,7 +273,7 @@ function showEvent(event) {
   if (event.type === 'discard') { sound('tile'); return; }
   if (event.type === 'start') { sound(); return; }
   if (event.type === 'timeout') { toast(`${event.name}: Zeit um. Der Zug wurde automatisch gespielt.`); return; }
-  if (event.type === 'finish') { sound('win'); return; }
+  if (event.type === 'finish') { sound('win'); if(event.joker) celebrateJoker(event); return; }
   if (!['gesture', 'throw', 'bluff'].includes(event.type)) return;
   if (event.player === user.id && !matchMedia('(max-width: 1000px), (max-height: 540px)').matches) $('#center').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
   clearTimeout(eventTimer);
@@ -307,9 +312,11 @@ document.addEventListener('click', e => {
   const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target }); return; }
   const player = e.target.closest('[data-target]'); if (player?.dataset.target) { target = target === player.dataset.target ? null : player.dataset.target; render(); return; }
   const action = e.target.closest('[data-action]')?.dataset.action;
-  if (action === 'solo') send('create', { solo: true });
-  else if (action === 'create') send('create');
+  if (action === 'solo' || action === 'create') setupTable(action === 'solo');
   else if (action === 'start') send('start');
+  else if (action === 'settings') setupTable(false, true);
+  else if (action === 'new-match') send('new-match');
+  else if (action === 'scores') showScores();
   else if (action === 'draw-stock') send('draw', { source: 'stock' });
   else if (action === 'draw-discard') send('draw', { source: 'discard' });
   else if (action === 'invite') invite();
@@ -340,6 +347,53 @@ $('#leave').onclick = () => {
   modal('<h2>Schon Feierabend?</h2><p>Beim Verlassen gibst du diese Runde auf. Die anderen spielen weiter.</p><button id="confirm-leave" class="button primary">Tisch verlassen</button>');
   $('#confirm-leave').onclick = () => { send('leave'); $('#modal').close(); };
 };
-$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Okey!</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf einen Mitspieler, um Gesten gezielt zu schicken. Nochmals tippen bedeutet: an alle.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Wir zählen Rundensiege. Eine Strafpunktwertung ist in dieser Version nicht enthalten.</p>`);
+$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf einen Mitspieler, um Gesten gezielt zu schicken. Nochmals tippen bedeutet: an alle.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
 
 render(); connect();
+
+function markDraw(next) {
+  const draw = next?.lastDraw, key = draw ? `${next.code}:${next.matchNumber}:${next.round}:${draw.id}:${draw.at}` : '';
+  if (key === newTileKey) return;
+  clearTimeout(newTileTimer); newTileKey = key; newTileId = null;
+  const remaining = draw ? 2000 - (next.serverNow - draw.at) : 0;
+  if (remaining <= 0 || !next.hand.some(t => t.id === draw.id)) return;
+  newTileId = draw.id;
+  newTileTimer = setTimeout(() => {
+    newTileId = null;
+    for (const el of document.querySelectorAll('.newly-drawn')) { el.classList.remove('newly-drawn'); el.querySelector('.new-tile-badge')?.remove(); }
+  }, Math.min(2000, remaining));
+}
+function scoreLabel(index) { return room.mode === 'teams' ? `Team ${index === 0 ? 'A' : 'B'}` : room.players[index]?.name || `Platz ${index + 1}`; }
+function matchTitle() { return room.matchWinners.length > 1 ? 'Partie unentschieden!' : `${esc(scoreLabel(room.matchWinners[0]))} gewinnt die Partie!`; }
+function showScores() {
+  if (!room) return;
+  const labels = room.totals.map((_, i) => scoreLabel(i));
+  const members = room.mode === 'teams' ? `<p class="score-members">${[0,1].map(team => `<strong>Team ${team === 0 ? 'A' : 'B'}:</strong> ${room.players.filter(p => p.team === team).map(p => esc(p.name)).join(' &amp; ')}`).join('<br>')}</p>` : '';
+  modal(`<h2>${room.matchComplete ? matchTitle() : 'Punktestand'}</h2>${members}<p>${room.scores.length} von ${room.roundLimit} Runden · Weniger Punkte gewinnt.</p><div class="score-scroll"><table class="score-table"><thead><tr><th>Runde</th>${labels.map(l=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${Array.from({length:room.roundLimit},(_,i)=>{const row=room.scores[i];return `<tr><th>${i+1}${row?.joker?' ✦':''}</th>${labels.map((_,j)=>`<td>${row ? row.points[j] : '–'}</td>`).join('')}</tr>`}).join('')}</tbody><tfoot><tr><th>Total</th>${room.totals.map(n=>`<td>${n}</td>`).join('')}</tr></tfoot></table></div><p class="score-note">✦ Joker-Mshile: Gewinner −10, Gegner doppelt. Nicht verwendbarer Joker: 0 Punkte.</p>`);
+  $('#modal-content').dataset.view = 'scores';
+}
+$('#scores-button').onclick = showScores;
+function setupTable(solo, existing = false) {
+  const selectedMode = existing ? room.mode : solo ? 'individual' : 'teams';
+  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><label for="match-rounds">Anzahl Runden</label><select id="match-rounds"><option value="5">5 Runden</option><option value="7">7 Runden</option></select><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
+  $('#match-mode').value = selectedMode; $('#match-rounds').value = String(existing ? room.roundLimit : 5);
+  $('#match-form').onsubmit = event => {
+    event.preventDefault(); const options = { mode: $('#match-mode').value, roundLimit: Number($('#match-rounds').value) };
+    if (existing) { send('configure', options); send('start'); } else send('create', { solo, ...options });
+    $('#modal').close();
+  };
+}
+$('#sort-combinations').onclick = () => {
+  const result = bestCombinations(room?.hand || demoHand), groups = [...result.groups, ...result.rest.map(t => [t])];
+  order = groups.flat().map(t => t.id); freeRack.reset(); renderRack(); freeRack.arrange(groups);
+  toast(`${result.groups.length} Kombinationen · ${result.points} Restpunkte`);
+};
+function celebrateJoker(event) {
+  const table = $('.table'), age = Math.max(0, Date.now() + serverOffset - event.at);
+  if (age >= 2600) return;
+  clearTimeout(jokerTimer); clearTimeout(eventTimer); table.classList.remove('joker-finale'); void table.offsetWidth; table.classList.add('joker-finale');
+  $('#table-event').innerHTML = '<div class="joker-finale-banner" role="status"><strong>JOKER-MSHILE!</strong><span>−10 · GEGNER DOPPELT</span></div>';
+  for (const animation of table.getAnimations()) animation.currentTime = age;
+  telegram?.HapticFeedback?.notificationOccurred('success');
+  jokerTimer = setTimeout(() => { table.classList.remove('joker-finale'); $('#table-event').replaceChildren(); }, 2600-age);
+}

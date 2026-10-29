@@ -235,3 +235,30 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
 #rack-tiles .tile.bundled{box-shadow:inset 0 -4px #539c65,0 0 0 1px #8dcc89,1px 2px 3px #39291d55}
 #rack-tiles .tile.magnet-target{outline:2px solid #b3f0a3;outline-offset:1px;box-shadow:0 0 9px #99df9970}
 #rack .rack-engraving{font-size:8px;letter-spacing:.15px;color:#392e1d;bottom:2px;text-shadow:0 1px #edd1a380;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px}
+
+/* Match controls and score sheet. */
+#scores-button{white-space:nowrap;padding:8px 12px;min-height:38px}
+.rack-meta{flex-wrap:wrap;gap:6px}.rack-meta .text-button{min-height:36px;padding:4px 8px}
+.match-settings-summary{display:block;font-size:11px;line-height:1.5;color:#eddbb9}
+#match-form{display:grid;gap:12px}#match-form select{width:100%;min-height:44px;padding:10px;background:#173f36;color:#fff3da;border:1px solid #bca87d;border-radius:8px;font:inherit}
+.score-scroll{overflow-x:auto}.score-table{width:100%;border-collapse:collapse;margin:16px 0;font-variant-numeric:tabular-nums}
+.score-table th,.score-table td{padding:10px 12px;text-align:right;border-bottom:1px solid #bca87d44}.score-table th:first-child{text-align:left}
+.score-table thead,.score-table tfoot{background:#ddbd741a}.score-table tfoot{font-weight:bold;color:#f6d98f}.score-note,.score-members{font-size:12px;line-height:1.7}
+.tile.newly-drawn{outline:3px solid #ffd86a;outline-offset:1px;animation:draw-glow .65s ease-in-out 3;z-index:4!important}
+.new-tile-badge{position:absolute;top:1px;right:1px;z-index:4;border-radius:3px;background:#ffdf7a;color:#3a280a;font:700 8px/1.2 sans-serif;padding:2px;pointer-events:none}
+@keyframes draw-glow{50%{box-shadow:0 0 18px 5px #ffd86aaa}}
+.joker-finale{animation:joker-table-spin 2.6s ease-in-out;z-index:20}
+.joker-finale-banner{display:grid;gap:8px;padding:22px;border:2px solid #ffdc75;border-radius:14px;background:#153d32f2;color:#ffe398;text-align:center;box-shadow:0 0 60px #ffcf7277}
+.joker-finale-banner strong{font-size:clamp(23px,5vw,42px)}.joker-finale-banner span{font-size:13px;font-weight:bold}
+@keyframes joker-table-spin{0%,100%{transform:rotate(0) scale(1)}8%,24%{transform:rotate(-5deg) scale(.98)}16%,32%{transform:rotate(5deg) scale(.98)}50%{transform:rotate(-10deg) scale(.75)}78%{transform:rotate(365deg) scale(.8)}90%{transform:rotate(358deg) scale(1.02)}}
+@media(prefers-reduced-motion:reduce){.tile.newly-drawn{animation:none;box-shadow:0 0 8px #ffdf7a}.joker-finale{animation:none}.joker-finale-banner{box-shadow:none}}
+@media(max-width:600px){#scores-button{font-size:11px;padding:6px 8px}.rack-meta{font-size:10px}.score-table th,.score-table td{padding:9px 6px}}
+@media(max-width:1000px),(max-height:540px){
+  .rack-area,.in-game .rack-area{grid-template-rows:52px minmax(0,1fr) 44px}
+  .rack-meta,.in-game .rack-meta{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:16px 32px;gap:4px}
+  #player-label,#turn-label{max-width:none;font-size:9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .rack-meta .text-button{min-height:32px;padding:4px}
+  .room-tag,.in-game .room-tag{order:0;flex:1;overflow:hidden}.room-tag .table-name{display:block;overflow:hidden;text-overflow:ellipsis}
+  #scores-button{order:1;flex-shrink:0}#tools-button{flex-shrink:0;margin-left:0}
+  .welcome-buttons{flex-wrap:wrap}.match-settings-summary{flex-basis:100%}
+}

@@ -9,6 +9,10 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 - Holzbretter und elfenbeinfarbene Steine, Filztisch, leichte räumliche Tiefe durch CSS. Kein WebGL und keine schwere 3D-Engine.
 - Die zwei Steine mit Comic-Brustmotiv sind dauerhaft Joker. Kein Anzeiger, keine Ersatzsteine; alle 104 Zahlensteine behalten ihren Wert. 106 Steine insgesamt, nach dem Austeilen 49 im Vorrat.
 - Letzter Abwurf je Spieler sichtbar; aufgenommene Abwürfe bleiben als historische Anzeige mit ↗ markiert. Die Mitte zeigt den eigenen Abwurf und separat den aktuell aufnehmbaren Stein.
+- Partien über 5 oder 7 Runden; vor dem Start vom Gastgeber auswählbar. Team A: Plätze 1 und 3, Team B: Plätze 2 und 4. Einzelmodus bleibt verfügbar.
+- „Punkte“ öffnet die Rundenliste und Gesamtsummen. Weniger Punkte gewinnt; Gleichstand bedeutet geteilter Sieg. Die Wertung sucht die global beste Kombinationseinteilung und summiert die übrigen Zahlenwerte, unabhängig von der Brettanordnung. Einzelne Paare zählen nur bei einer vollständigen Sieben-Paare-Hand.
+- Gewinnerteam 0 Punkte; ein Joker als letzter Abwurf bei gültiger Resthand ergibt −10 für die Gewinner und doppelte Gegnerpunkte. Dazu wackelt und dreht sich der Tisch; bei reduzierter Bewegung erscheint nur die Ansage. Nicht verwendbare Joker kosten als Hausregel 0 Punkte. Bei leerem Vorrat zählt jede Seite ihre Restpunkte. Sind alle Spieler einer Seite ausgeschieden, gewinnt die verbleibende Seite.
+- Neue Steine aus Vorrat oder Abwurf werden für zwei Sekunden golden markiert und mit „NEU“ beschriftet. „Farbe“ sortiert aufsteigend pro Farbe, „Kombis“ gruppiert die beste Kombinationseinteilung. „Mshile“ schliesst die Runde, „Fuge gjurin“ wirft ab.
 - Solo gegen drei Computer, private Tische für bis zu vier Menschen, Computer auf freien Plätzen beim Start. Der Gastgeber startet die Runde und die Revanche.
 - Server entscheidet über Ziehen, Abwerfen und Gewinn; jeder Client erhält nur seine eigene Hand. Vollständige Partition in Reihen/Gruppen sowie sieben identische Paare, 12–13–1 erlaubt, 13–1–2 verboten.
 - Steine auf zwei Leisten frei ordnen: direkt mit Finger/Maus ziehen, per Antippen platzieren oder mit Pfeiltasten verschieben. Keine Überdeckung; andere Steine machen Platz. Passende Reihen, Farbgruppen und Paare rasten magnetisch zusammen und werden grün markiert. Ganze Kombinationen gemeinsam ziehen; einzelne Steine erst antippen, dann herausziehen. Lücken, Gruppen und Positionen bleiben pro Tisch/Runde erhalten, auch beim Formatwechsel. Sortieren ordnet das Brett neu.
@@ -26,7 +30,7 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 1. Den Bot zur Telegram-Gruppe hinzufügen und dort `/nisja` senden (bei mehreren Bots `/nisja@GoyimGjurzi_bot`).
 2. Der Bot erstellt sofort eine Lobby und reserviert den Gastgeberplatz für den Absender. Seine Gruppenantwort enthält **Am Tisch teilnehmen**.
 3. Alle Teilnehmer öffnen diesen Knopf. Der Link öffnet die Main Mini App und übergibt den Tisch automatisch; niemand muss einen Code eingeben. Der Gastgeber sieht die beitretenden Kollegen.
-4. Der Gastgeber drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
+4. Der Gastgeber wählt über **Partie einstellen & starten** Spielweise und Rundenzahl und drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
 
 Weitere `/nisja` derselben Gruppe verweisen auf denselben Tisch. Während einer laufenden Runde können vorhandene Teilnehmer zurückkehren; neue Spieler können erst nach der Runde beitreten, sofern Plätze frei sind. Wer bereits an einem anderen Tisch sitzt, muss diesen zuerst verlassen. Ein Tisch wird nicht automatisch zwischen Gruppen geteilt. Nach dem Verlassen aller Menschen oder nach zwei Stunden Inaktivität kann `/nisja` einen neuen Tisch erstellen. Wie bisher gehen Tische bei einem Serverneustart verloren.
 
@@ -73,13 +77,13 @@ Der systemd-Dienst verwendet den separaten Systembenutzer `okey` und die vorhand
 
 ## Stand und Grenzen
 
-Dies ist eine spielbare erste Version. Gezählt werden Rundensiege, **nicht** die traditionelle Strafpunktwertung; Partnerspiel fehlt; ein Anzeiger ist in dieser Variante nicht vorgesehen. Die Regeln zum Brettwerfen, Zuglimit und letzten verbliebenen Spieler sind bewusste Hausregeln.
+Dies ist eine spielbare erste Version. Partien umfassen 5 oder 7 Runden, wahlweise 2 gegen 2 (gegenüberliegende Plätze) oder jeder gegen jeden; ein Anzeiger ist in dieser Variante nicht vorgesehen. Die Regeln zum Brettwerfen, Zuglimit und letzten verbliebenen Spieler sind bewusste Hausregeln.
 
 Computer verwenden eine einfache Kombinationen-Heuristik ohne Einsicht in andere Hände. Sie prüfen Gewinnhände exakt, spielen aber nicht auf Expertenniveau. Die Gesten verwenden System-Emoji plus Animationen; das Joker-Motiv ist ein eigenes SVG.
 
-Tische, Sitzungen und Siege leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zwei Stunden. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
+Tische, Sitzungen und die komplette Punktehistorie leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zwei Stunden. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
 
-Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Bluff, die Sperre nach einem Joker-Abwurf sowie Shishas und das Auflösen des Rauchs ab. 18 Tests bestehen lokal; vor der Bereitstellung werden sie zusätzlich auf dem VPS ausgeführt. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden geprüft. Echte Telegram-Geräte, Audio-Wiedergabe und Touch-Bedienung auf iOS/Android sind noch zu prüfen.
+Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Bluff, die Sperre nach einem Joker-Abwurf sowie Shishas und das Auflösen des Rauchs ab. 43 Tests bestehen lokal; vor der Bereitstellung werden sie zusätzlich auf dem VPS ausgeführt. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden geprüft. Echte Telegram-Geräte, Audio-Wiedergabe und Touch-Bedienung auf iOS/Android sind noch zu prüfen.
 
 ## Tests und Dateien
 
@@ -93,3 +97,5 @@ Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Blu
 - `deploy/okey.service`: Separate systemd-Vorlage.
 
 Grundlage mit ausdrücklich angepasster fester Joker-Regel: [Pagat – klassisches Okey](https://www.pagat.com/rummy/okey.html). Telegram: [Mini Apps](https://core.telegram.org/bots/webapps).
+
+Die Erweiterung um Teamwertung und Sortierung wurde lokal mit 43 automatisierten Tests sowie einer DOM-Prüfung gegen echte HTTP-/WebSocket-Verbindungen geprüft. Eine visuelle Browserprüfung war in der Cloud wegen des gesperrten Browser-Downloads nicht möglich; Handyansicht und Animation auf echten Telegram-Geräten bleiben zu prüfen.

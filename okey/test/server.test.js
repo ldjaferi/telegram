@@ -44,6 +44,10 @@ test('group invitation connects signed Telegram colleagues to the waiting table 
     const joined = await guest.until(m => m.room?.players.length === 2);
     assert.equal(joined.room.code, host.ready.room.code); assert.equal(joined.room.status, 'lobby');
     await host.until(m => m.room?.players.length === 2);
+    host.ws.send(JSON.stringify({ type: 'configure', mode: 'teams', roundLimit: 7 }));
+    await guest.until(m => m.room?.roundLimit === 7);
+    guest.ws.send(JSON.stringify({ type: 'configure', roundLimit: 5 }));
+    assert.match((await guest.until(m => m.type === 'error')).message, /Gastgeber/);
     guest.ws.send(JSON.stringify({ type: 'start' }));
     assert.match((await guest.until(m => m.type === 'error')).message, /Gastgeber/);
     host.ws.send(JSON.stringify({ type: 'start' }));
@@ -118,7 +122,7 @@ test('production subpath: assets, signed Telegram login, allowed IDs and WebSock
     assert.equal((await fetch(base + '/okey/art.svg')).status, 200);
     const art = await fetch(base + '/okey/bluff.svg'); assert.equal(art.status, 200); assert.match(await art.text(), /Comic-Männerbrust/);
     assert.equal((await fetch(base + '/okey/shisha.svg')).status, 200);
-    for (const name of ['rack.js', 'music.js', 'melds.js']) { const module = await fetch(base + '/okey/' + name); assert.equal(module.status, 200); assert.match(module.headers.get('content-type'), /javascript/); }
+    for (const name of ['rack.js', 'music.js', 'melds.js', 'combinations.js']) { const module = await fetch(base + '/okey/' + name); assert.equal(module.status, 200); assert.match(module.headers.get('content-type'), /javascript/); }
     assert.equal((await post('/api/login', { initData: signed(99) })).status, 403);
     assert.notEqual((await post('/api/login', { initData: signed(42) + 'x' })).status, 200);
     const result = await post('/api/login', { initData: signed(42) }); assert.equal(result.status, 200); const login = await result.json();

@@ -1,4 +1,5 @@
 import { randomInt, randomBytes } from 'node:crypto';
+import { bestCombinations } from '../public/combinations.js';
 
 export const GESTURES = ['finger', 'nose', 'fart', 'tea'];
 export const BLUFF_COOLDOWN_MS = 8000;
@@ -74,7 +75,7 @@ function usefulness(tile, hand) {
   return score + colors.size * 3 + (colors.size >= 2 ? 3 : 0);
 }
 export function botDiscard(hand) {
-  for (const tile of hand) if (winningHand(hand.filter(t => t.id !== tile.id))) return tile;
+  for (const tile of [...hand].sort((a,b) => Number(isWild(b)) - Number(isWild(a)))) if (winningHand(hand.filter(t => t.id !== tile.id))) return tile;
   return [...hand].sort((a, b) => usefulness(a, hand) - usefulness(b, hand))[0];
 }
 
@@ -92,11 +93,13 @@ export class Arena {
     return room;
   }
   player(user, bot = false) { return { id: user.id, name: user.name, bot, hand: [], out: false, wins: 0, connected: true, lastGesture: -Infinity }; }
-  create(user, solo = false) {
+  create(user, solo = false, options = {}) {
     if (this.roomFor(user.id)) throw Error('Verlasse zuerst deinen aktuellen Tisch.');
     if (this.rooms.size >= 100) throw Error('Alle Tische sind belegt.');
     let code; do { code = randomBytes(3).toString('hex').toUpperCase(); } while (this.rooms.has(code));
-    const r = { code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, touched: this.now() };
+    const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5;
+    if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
+    const r = { mode, roundLimit, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, touched: this.now() };
     this.rooms.set(code, r);
     if (solo) this.start(user.id);
     return r;
@@ -107,19 +110,35 @@ export class Arena {
     if (old) throw Error('Verlasse zuerst deinen aktuellen Tisch.');
     const r = this.rooms.get(code);
     if (!r) throw Error('Diesen Tisch gibt es nicht mehr.');
-    if (r.status === 'playing' || r.players.length >= 4) throw Error('Der Tisch ist voll oder die Runde läuft bereits.');
-    r.players.push(this.player(user)); r.touched = this.now(); return r;
+    if (r.status === 'playing' || (r.players.length >= 4 && !r.players.some(p => p.bot))) throw Error('Der Tisch ist voll oder die Runde läuft bereits.');
+    const vacant = r.players.findIndex(p => p.bot);
+    if (vacant >= 0) r.players[vacant] = this.player(user); else r.players.push(this.player(user)); r.touched = this.now(); return r;
   }
   event(r, type, data = {}) { r.events.push({ seq: ++r.seq, type, at: this.now(), ...data }); r.events = r.events.slice(-20); r.touched = this.now(); }
+  configure(id, options = {}) {
+    const r = this.roomFor(id);
+    if (!r || r.owner !== id || r.round !== 0) throw Error('Nur der Gastgeber kann vor der Partie die Regeln ändern.');
+    const mode = options.mode ?? r.mode, roundLimit = options.roundLimit ?? r.roundLimit;
+    if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
+    r.mode = mode; r.roundLimit = roundLimit; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
+  }
+  newMatch(id) {
+    const r = this.roomFor(id);
+    if (!r || r.owner !== id || !r.matchComplete) throw Error('Erst die aktuelle Partie beenden.');
+    r.round = 0; r.scores = []; r.totals.fill(0); r.matchComplete = false; r.matchWinners = [];
+    r.matchNumber++; r.status = 'lobby'; r.result = null;
+    for (const p of r.players) { p.hand = []; p.out = false; p.lastDraw = null; }
+    this.event(r, 'new-match');
+  }
   start(id) {
     const r = this.roomFor(id);
-    if (!r || r.owner !== id || r.status === 'playing') throw Error('Nur der Gastgeber kann die nächste Runde starten.');
+    if (!r || r.owner !== id || r.status === 'playing' || r.matchComplete) throw Error('Nur der Gastgeber kann die nächste Runde starten.');
     while (r.players.length < 4) { const i = r.players.length - 1; r.players.push(this.player({ id: `bot-${r.code}-${i}`, name: BOT_NAMES[i] }, true)); }
     const tiles = deck();
     for (let i = tiles.length - 1; i > 0; i--) { const j = randomInt(i + 1); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
     r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
     r.shishaReadyAt = 0; r.nextPuffAt = this.now() + 14000 + randomInt(10000);
-    for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; }
+    for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
   }
   deadline(r) { r.deadline = this.now() + this.turnMs; r.botAt = this.now() + 1400; }
@@ -141,7 +160,7 @@ export class Arena {
       if (!r.stock.length) { this.finish(r, null, 'stock'); return; }
       tile = r.stock.pop();
     }
-    p.hand.push(tile); r.phase = 'discard'; r.botAt = this.now() + 700; r.touched = this.now();
+    p.hand.push(tile); p.lastDraw = { id: tile.id, at: this.now() }; r.phase = 'discard'; r.botAt = this.now() + 700; r.touched = this.now();
   }
   discard(id, tileId, claim = false) {
     const [r, p] = this.requireTurn(id, 'discard');
@@ -155,21 +174,37 @@ export class Arena {
     if (claim && kind) { this.finish(r, p, kind, isWild(tile)); return; }
     this.next(r);
   }
+  onlyOneSide(r) { return r.mode === 'teams' ? new Set(r.players.flatMap((p, seat) => p.out ? [] : [seat % 2])).size <= 1 : r.players.filter(p => !p.out).length <= 1; }
   next(r) {
-    if (r.players.filter(p => !p.out).length <= 1) { this.finish(r, r.players.find(p => !p.out), 'last'); return; }
+    if (this.onlyOneSide(r)) { this.finish(r, r.players.find(p => !p.out), 'last'); return; }
     do { r.turn = (r.turn + 1) % 4; } while (r.players[r.turn].out);
     r.phase = 'draw'; this.deadline(r);
   }
   finish(r, player, kind, joker = false) {
+    if (r.status !== 'playing') return;
     r.status = 'finished'; r.result = { winner: player?.id || null, name: player?.name || null, kind, joker };
     if (player) player.wins++;
-    this.event(r, 'finish', { player: player?.id });
+    const winnerSeat = player ? r.players.indexOf(player) : -1;
+    const winner = winnerSeat < 0 ? -1 : r.mode === 'teams' ? winnerSeat % 2 : winnerSeat;
+    const points = Array(r.totals.length).fill(0);
+    const penalties = r.players.map((p, seat) => {
+      const team = r.mode === 'teams' ? seat % 2 : seat;
+      const value = team === winner ? 0 : bestCombinations(p.hand).points;
+      points[team] += value * (joker ? 2 : 1);
+      return value;
+    });
+    if (winner >= 0 && joker) points[winner] = -10;
+    r.scores.push({ round: r.round, points, penalties, winner, joker, kind, names: r.players.map(p => p.name) });
+    r.totals = r.totals.map((n, i) => n + points[i]);
+    r.matchComplete = r.round >= r.roundLimit;
+    if (r.matchComplete) r.matchWinners = r.totals.flatMap((n, i) => n === Math.min(...r.totals) ? [i] : []);
+    this.event(r, 'finish', { player: player?.id, joker });
   }
   surrender(id) {
     const r = this.roomFor(id); const p = r?.players.find(p => p.id === id);
     if (!r || r.status !== 'playing' || p.out) throw Error('Du bist nicht in einer laufenden Runde.');
     p.out = true; this.event(r, 'throw', { player: id, name: p.name });
-    if (r.players.filter(p => !p.out).length <= 1) this.finish(r, r.players.find(p => !p.out), 'last');
+    if (this.onlyOneSide(r)) this.finish(r, r.players.find(p => !p.out), 'last');
     else if (r.players[r.turn].id === id) this.next(r);
     return r;
   }
@@ -201,7 +236,7 @@ export class Arena {
     const p = r.players.find(p => p.id === id);
     if (r.status === 'playing' && !p.out) this.surrender(id);
     // A departing player becomes a vacant, surrendered seat until the round ends.
-    if (r.status === 'playing') { p.id = `left-${randomBytes(4).toString('hex')}`; p.bot = true; p.connected = false; }
+    if (r.round > 0) { p.id = `left-${randomBytes(4).toString('hex')}`; p.bot = true; p.connected = false; }
     else r.players = r.players.filter(p => p.id !== id);
     if (r.owner === id) r.owner = r.players.find(p => !p.bot)?.id;
     if (!r.players.some(p => !p.bot)) this.rooms.delete(r.code);
@@ -242,8 +277,9 @@ export class Arena {
     const me = r.players.find(p => p.id === id);
     return {
       code: r.code, owner: r.owner, status: r.status, round: r.round, turn: r.turn, phase: r.phase,
-      rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
-      hand: me?.hand || [], players: r.players.map(p => ({ id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, count: p.hand.length, wins: p.wins })),
+      mode: r.mode, roundLimit: r.roundLimit, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
+      lastDraw: me?.lastDraw || null, rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
+      hand: me?.hand || [], players: r.players.map((p, seat) => ({ seat, team: seat % 2, id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, count: p.hand.length, wins: p.wins })),
       canBluff: Boolean(r.status === 'playing' && me && !me.out && me.hand.some(tile => isWild(tile))),
       bluffReadyAt: Math.max(Number.isFinite(me?.lastBluff) ? me.lastBluff + BLUFF_COOLDOWN_MS : 0, Number.isFinite(me?.lastGesture) ? me.lastGesture + 2500 : 0),
       shishaReadyAt: r.shishaReadyAt || 0,

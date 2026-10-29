@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Arena } from './game.js';
 import { Sessions, validateTelegram } from './auth.js';
 
-const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/style.css', 'style.css'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
+const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/style.css', 'style.css'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml' };
 export function createApplication(config = {}) {
   config = { host: '127.0.0.1', port: 3200, dev: true, publicUrl: 'http://127.0.0.1:3200', allowedIds: [], allowPublic: false, ...config };
@@ -93,8 +93,10 @@ export function createApplication(config = {}) {
           if (session.expires < Date.now()) return ws.close(4003, 'Anmeldung abgelaufen');
           rate(`ws:${user.id}`, 25, 1000);
           const m = JSON.parse(raw.toString());
-          if (m.type === 'create') arena.create(user, m.solo === true);
+          if (m.type === 'create') arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
           else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase());
+          else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit });
+          else if (m.type === 'new-match') arena.newMatch(user.id);
           else if (m.type === 'start') arena.start(user.id);
           else if (m.type === 'draw') arena.draw(user.id, m.source);
           else if (m.type === 'discard') arena.discard(user.id, m.tileId, m.claim === true);
