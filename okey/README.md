@@ -30,7 +30,7 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 1. Den Bot zur Telegram-Gruppe hinzufügen und dort `/nisja` senden (bei mehreren Bots `/nisja@GoyimGjurzi_bot`).
 2. Der Bot erstellt sofort eine Lobby und reserviert den Gastgeberplatz für den Absender. Seine Gruppenantwort enthält **Am Tisch teilnehmen**.
 3. Alle Teilnehmer öffnen diesen Knopf. Der Link öffnet die Main Mini App und übergibt den Tisch automatisch; niemand muss einen Code eingeben. Der Gastgeber sieht die beitretenden Kollegen.
-4. Der Gastgeber wählt über **Partie einstellen & starten** Spielweise und Rundenzahl und drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
+4. Der Gastgeber wählt über **5 oder 7 Runden wählen** Spielweise und Rundenzahl und drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
 
 Weitere `/nisja` derselben Gruppe verweisen auf denselben Tisch. Während einer laufenden Runde können vorhandene Teilnehmer zurückkehren; neue Spieler können erst nach der Runde beitreten, sofern Plätze frei sind. Wer bereits an einem anderen Tisch sitzt, muss diesen zuerst verlassen. Ein Tisch wird nicht automatisch zwischen Gruppen geteilt. Nach dem Verlassen aller Menschen oder nach zwei Stunden Inaktivität kann `/nisja` einen neuen Tisch erstellen. Wie bisher gehen Tische bei einem Serverneustart verloren.
 
@@ -99,3 +99,5 @@ Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Blu
 Grundlage mit ausdrücklich angepasster fester Joker-Regel: [Pagat – klassisches Okey](https://www.pagat.com/rummy/okey.html). Telegram: [Mini Apps](https://core.telegram.org/bots/webapps).
 
 Die Erweiterung um Teamwertung und Sortierung wurde lokal mit 43 automatisierten Tests sowie einer DOM-Prüfung gegen echte HTTP-/WebSocket-Verbindungen geprüft. Eine visuelle Browserprüfung war in der Cloud wegen des gesperrten Browser-Downloads nicht möglich; Handyansicht und Animation auf echten Telegram-Geräten bleiben zu prüfen.
+
+Die Rundenzahl wird vor einer neuen Partie über zwei grosse Auswahlfelder bestätigt. Es gibt keine automatische Vorauswahl; auch der Server verhindert einen Start ohne bestätigte Auswahl. Zwischen den Runden bleibt diese Wahl bestehen. Die wichtigen Texte und Bedienelemente sind für bessere Lesbarkeit auf Mobilgeräten vergrössert.

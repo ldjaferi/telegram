@@ -44,6 +44,9 @@ test('group invitation connects signed Telegram colleagues to the waiting table 
     const joined = await guest.until(m => m.room?.players.length === 2);
     assert.equal(joined.room.code, host.ready.room.code); assert.equal(joined.room.status, 'lobby');
     await host.until(m => m.room?.players.length === 2);
+    host.ws.send(JSON.stringify({ type: 'start' }));
+    assert.match((await host.until(m => m.type === 'error')).message, /5 oder 7/);
+    assert.equal(app.arena.roomFor('42').status, 'lobby');
     host.ws.send(JSON.stringify({ type: 'configure', mode: 'teams', roundLimit: 7 }));
     await guest.until(m => m.room?.roundLimit === 7);
     guest.ws.send(JSON.stringify({ type: 'configure', roundLimit: 5 }));
@@ -77,10 +80,13 @@ test('real clients: rooms, secret hands, targeted gestures, surrender, reconnect
     const forbidden = await fetch(base + '/api/login', { method: 'POST', headers: { Origin: 'https://evil.invalid', 'Content-Type': 'application/json' }, body: '{}' }); assert.equal(forbidden.status, 403);
     assert.equal((await post('/api/ticket')).status, 401);
     const a = await client('Ali'), b = await client('Leyla');
+    a.send('create', { solo: true });
+    assert.match((await a.until(m => m.type === 'error')).message, /5 oder 7/);
+    assert.equal(app.arena.roomFor(a.login.user.id), undefined);
     a.send('create'); const created = await a.until(m => m.room?.status === 'lobby'); const code = created.room.code;
     b.send('join', { code }); await b.until(m => m.room?.players.length === 2);
     b.send('start'); assert.equal((await b.until(m => m.type === 'error')).type, 'error');
-    a.send('start'); const av = (await a.until(m => m.room?.status === 'playing')).room; const bv = (await b.until(m => m.room?.status === 'playing')).room;
+    a.send('configure', { roundLimit: 5 }); a.send('start'); const av = (await a.until(m => m.room?.status === 'playing')).room; const bv = (await b.until(m => m.room?.status === 'playing')).room;
     assert.equal(av.hand.length, 15); assert.equal(bv.hand.length, 14); assert.equal(bv.players[0].hand, undefined);
     assert.equal(bv.hand.some(t => av.hand.some(x => x.id === t.id)), false);
     b.send('discard', { tileId: av.hand[0].id }); await b.until(m => m.type === 'error');
@@ -147,7 +153,7 @@ test('two real clients receive Joker-Bluff and shisha smoke; possession and tabl
   }
   try {
     const a = await client('Ali'), b = await client('Leyla'); a.send('create'); const lobby = await a.until(m => m.room?.code);
-    b.send('join', { code: lobby.room.code }); await b.until(m => m.room?.players.length === 2); a.send('start'); await a.until(m => m.room?.status === 'playing'); await b.until(m => m.room?.status === 'playing');
+    b.send('join', { code: lobby.room.code }); await b.until(m => m.room?.players.length === 2); a.send('configure', { roundLimit: 5 }); a.send('start'); await a.until(m => m.room?.status === 'playing'); await b.until(m => m.room?.status === 'playing');
     const r = app.arena.roomFor(a.id);
     // Put both wild tiles back into the stock, then give Ali exactly one.
     for (const p of r.players) for (let i = 0; i < p.hand.length; i++) if (isWild(p.hand[i])) {

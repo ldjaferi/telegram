@@ -167,11 +167,11 @@ function renderSeats() {
 }
 function renderCenter() {
   if (!room) {
-    $('#center').innerHTML = '<p class="welcome-title">Na, traust du dich?</p><p class="welcome-sub">Der Çay ist heiss.<br>Deine Gegner auch ein bisschen.</p><div class="welcome-buttons"><button class="button primary" data-action="solo">Los, eine Runde! ↗</button><button class="button secondary" data-action="create">Mit Freunden</button></div><div class="center-links"><button class="text-button" data-action="join-dialog">Tischcode eingeben →</button></div>';
+    $('#center').innerHTML = '<p class="welcome-title">Na, traust du dich?</p><p class="welcome-sub">Der Çay ist heiss.<br>Deine Gegner auch ein bisschen.</p><div class="welcome-buttons"><button class="button primary" data-action="solo">Alleine mit Computern ↗</button><button class="button secondary" data-action="create">Mit Freunden</button></div><div class="center-links"><button class="text-button" data-action="join-dialog">Tischcode eingeben →</button></div>';
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">Partie einstellen & starten →</button>' : ''}<span class="match-settings-summary">${room.roundLimit} Runden · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {
@@ -375,10 +375,13 @@ function showScores() {
 $('#scores-button').onclick = showScores;
 function setupTable(solo, existing = false) {
   const selectedMode = existing ? room.mode : solo ? 'individual' : 'teams';
-  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><label for="match-rounds">Anzahl Runden</label><select id="match-rounds"><option value="5">5 Runden</option><option value="7">7 Runden</option></select><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
-  $('#match-mode').value = selectedMode; $('#match-rounds').value = String(existing ? room.roundLimit : 5);
+  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><fieldset class="round-options"><legend>Wie viele Runden spielt ihr?</legend><label><input type="radio" name="rounds" value="5" required><span><strong>5</strong> Runden</span></label><label><input type="radio" name="rounds" value="7" required><span><strong>7</strong> Runden</span></label></fieldset><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Warte auf deine Kollegen. Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
+  $('#match-mode').value = selectedMode;
+  if (existing && room.roundLimitChosen) $(`#match-form input[value="${room.roundLimit}"]`).checked = true;
   $('#match-form').onsubmit = event => {
-    event.preventDefault(); const options = { mode: $('#match-mode').value, roundLimit: Number($('#match-rounds').value) };
+    event.preventDefault();
+    if (!$('#match-form').reportValidity()) return;
+    const options = { mode: $('#match-mode').value, roundLimit: Number($('#match-form input[name=rounds]:checked').value) };
     if (existing) { send('configure', options); send('start'); } else send('create', { solo, ...options });
     $('#modal').close();
   };

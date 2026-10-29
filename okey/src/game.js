@@ -99,7 +99,7 @@ export class Arena {
     let code; do { code = randomBytes(3).toString('hex').toUpperCase(); } while (this.rooms.has(code));
     const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5;
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
-    const r = { mode, roundLimit, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, touched: this.now() };
+    const r = { mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, touched: this.now() };
     this.rooms.set(code, r);
     if (solo) this.start(user.id);
     return r;
@@ -120,13 +120,13 @@ export class Arena {
     if (!r || r.owner !== id || r.round !== 0) throw Error('Nur der Gastgeber kann vor der Partie die Regeln ändern.');
     const mode = options.mode ?? r.mode, roundLimit = options.roundLimit ?? r.roundLimit;
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
-    r.mode = mode; r.roundLimit = roundLimit; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
+    r.mode = mode; r.roundLimit = roundLimit; if (options.roundLimit !== undefined) r.roundLimitChosen = true; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
   }
   newMatch(id) {
     const r = this.roomFor(id);
     if (!r || r.owner !== id || !r.matchComplete) throw Error('Erst die aktuelle Partie beenden.');
     r.round = 0; r.scores = []; r.totals.fill(0); r.matchComplete = false; r.matchWinners = [];
-    r.matchNumber++; r.status = 'lobby'; r.result = null;
+    r.roundLimitChosen = false; r.matchNumber++; r.status = 'lobby'; r.result = null;
     for (const p of r.players) { p.hand = []; p.out = false; p.lastDraw = null; }
     this.event(r, 'new-match');
   }
@@ -277,7 +277,7 @@ export class Arena {
     const me = r.players.find(p => p.id === id);
     return {
       code: r.code, owner: r.owner, status: r.status, round: r.round, turn: r.turn, phase: r.phase,
-      mode: r.mode, roundLimit: r.roundLimit, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
+      mode: r.mode, roundLimit: r.roundLimit, roundLimitChosen: r.roundLimitChosen, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
       lastDraw: me?.lastDraw || null, rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
       hand: me?.hand || [], players: r.players.map((p, seat) => ({ seat, team: seat % 2, id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, count: p.hand.length, wins: p.wins })),
       canBluff: Boolean(r.status === 'playing' && me && !me.out && me.hand.some(tile => isWild(tile))),

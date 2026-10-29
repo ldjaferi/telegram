@@ -46,7 +46,7 @@ test('5 and 7 round matches stop, choose lowest score and only host can reset',(
     for(let i=1;i<=limit;i++){for(const p of r.players.slice(1))p.hand=[t(0,8)];close(a,r,i===1);assert.equal(r.matchComplete,i===limit);if(i<limit)a.start('a');}
     assert.deepEqual(r.matchWinners,[0]);assert.equal(r.scores.length,limit);assert.equal(r.totals[0],-10);
     assert.throws(()=>a.start('a'));assert.throws(()=>a.newMatch('b'));a.newMatch('a');
-    assert.equal(r.round,0);assert.deepEqual(r.totals,[0,0]);assert.equal(r.scores.length,0);assert.equal(r.status,'lobby');
+    assert.equal(r.round,0);assert.equal(r.roundLimitChosen,false);assert.deepEqual(r.totals,[0,0]);assert.equal(r.scores.length,0);assert.equal(r.status,'lobby');
     assert.throws(()=>a.configure('b',{roundLimit:7}));assert.throws(()=>a.configure('a',{roundLimit:6}));a.configure('a',{roundLimit:7});assert.equal(r.roundLimit,7);
   }
 });

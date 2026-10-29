@@ -93,11 +93,18 @@ export function createApplication(config = {}) {
           if (session.expires < Date.now()) return ws.close(4003, 'Anmeldung abgelaufen');
           rate(`ws:${user.id}`, 25, 1000);
           const m = JSON.parse(raw.toString());
-          if (m.type === 'create') arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
+          if (m.type === 'create') {
+            if (m.solo === true && ![5, 7].includes(m.roundLimit)) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen.');
+            arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
+          }
           else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase());
           else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit });
           else if (m.type === 'new-match') arena.newMatch(user.id);
-          else if (m.type === 'start') arena.start(user.id);
+          else if (m.type === 'start') {
+            const r = arena.roomFor(user.id);
+            if (r?.owner === user.id && r.round === 0 && !r.roundLimitChosen) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen oder lade das Spiel neu.');
+            arena.start(user.id);
+          }
           else if (m.type === 'draw') arena.draw(user.id, m.source);
           else if (m.type === 'discard') arena.discard(user.id, m.tileId, m.claim === true);
           else if (m.type === 'surrender') arena.surrender(user.id);

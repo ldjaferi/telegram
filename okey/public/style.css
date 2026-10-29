@@ -262,3 +262,34 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
   #scores-button{order:1;flex-shrink:0}#tools-button{flex-shrink:0;margin-left:0}
   .welcome-buttons{flex-wrap:wrap}.match-settings-summary{flex-basis:100%}
 }
+
+/* Readable game text and explicit round selection. */
+#match-form,.score-table{font-size:16px}#match-form p,dialog p,dialog li{font-size:15px;line-height:1.5}
+.round-options{border:0;padding:0;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+.round-options legend{font-size:18px;font-weight:700;padding:0;margin-bottom:12px}
+.round-options label{position:relative;cursor:pointer;display:flex;align-items:center;gap:8px;padding:16px 12px;background:#1d4b3e;border:2px solid #bba777;border-radius:12px;font-size:16px}
+.round-options label:has(input:checked){border-color:#ffdf86;background:#3d6245;box-shadow:0 0 0 2px #ffdf8644}
+.round-options input{width:20px;height:20px;accent-color:#efca78;margin:0;flex-shrink:0}.round-options strong{font-size:30px}
+.seat-name{font-size:14px}.seat-status{font-size:12px;line-height:1.35}
+.match-settings-summary,.score-note,.score-members,.welcome-sub,.result-copy,.joker-hint{font-size:14px;line-height:1.45}
+.pile-unit>span,.round-pill,.in-game .round-pill{font-size:12px;line-height:1.35;letter-spacing:0}
+.winning-group h3,.winning-tile small,#bluff-hint,#shisha-hint{font-size:13px}
+#rack .rack-engraving{font-size:11px}.new-tile-badge{font-size:10px}
+#tools-dialog .gestures b,#tools-dialog .throw-button small,#tools-dialog footer{font-size:13px}
+#scores-button,#tools-button,.welcome-buttons .button,.play-actions .button{font-size:15px}
+@media(max-width:1000px),(max-height:540px){
+  .seat-name{font-size:12px}.seat-status{font-size:11px;line-height:1.3}
+  .room-tag,.in-game .room-tag{font-size:12px;letter-spacing:0}.room-tag .table-name{font-size:16px}
+  #scores-button,#tools-button{font-size:14px;min-height:38px;padding:7px 8px}
+  .rack-area,.in-game .rack-area{grid-template-rows:62px minmax(0,1fr) 44px}
+  .rack-meta,.in-game .rack-meta{grid-template-rows:22px 36px}
+  #player-label,#turn-label{font-size:12px}.rack-meta .text-button{font-size:14px;min-height:36px}
+  .welcome-sub,.result-copy,.joker-hint,.match-settings-summary{font-size:13px;line-height:1.4}
+  .welcome-buttons .button,.play-actions .button{font-size:15px}
+  .pile-unit>span,.round-pill,.in-game .round-pill{font-size:12px}
+  .round-pill,.in-game .round-pill{max-width:96%;white-space:normal;line-height:1.25;padding:4px 6px}
+  #table-actions{bottom:43px}
+  .seat-status{max-height:30px;overflow:hidden}
+  @container okey-table (min-height:350px){.seat-discard{top:84px}.center,.in-game .center,.table .center,.in-game .table .center{top:184px}body[data-stage=welcome] .table .center,body[data-stage=lobby] .table .center{top:50%}}
+}
+@media(orientation:landscape) and (max-height:420px){.joker-hint{display:none}.result-copy{font-size:12px}.round-options label{padding:10px}.round-options strong{font-size:25px}}
