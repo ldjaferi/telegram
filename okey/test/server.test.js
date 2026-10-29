@@ -128,7 +128,7 @@ test('production subpath: assets, signed Telegram login, allowed IDs and WebSock
     assert.equal((await fetch(base + '/okey/art.svg')).status, 200);
     const art = await fetch(base + '/okey/bluff.svg'); assert.equal(art.status, 200); assert.match(await art.text(), /Comic-Männerbrust/);
     assert.equal((await fetch(base + '/okey/shisha.svg')).status, 200);
-    for (const name of ['rack.js', 'music.js', 'melds.js', 'combinations.js']) { const module = await fetch(base + '/okey/' + name); assert.equal(module.status, 200); assert.match(module.headers.get('content-type'), /javascript/); }
+    for (const name of ['rack.js', 'music.js', 'melds.js', 'combinations.js', 'team-chat.js']) { const module = await fetch(base + '/okey/' + name); assert.equal(module.status, 200); assert.match(module.headers.get('content-type'), /javascript/); }
     assert.equal((await post('/api/login', { initData: signed(99) })).status, 403);
     assert.notEqual((await post('/api/login', { initData: signed(42) + 'x' })).status, 200);
     const result = await post('/api/login', { initData: signed(42) }); assert.equal(result.status, 200); const login = await result.json();
@@ -174,5 +174,48 @@ test('two real clients receive Joker-Bluff and shisha smoke; possession and tabl
     assert.deepEqual(smokeA.events.at(-1), smokeB.events.at(-1)); assert.equal(smokeA.events.at(-1).duration, 3000);
     assert.equal(smokeA.shishaReadyAt, smokeB.shishaReadyAt); assert.equal(smokeA.players[1].hand, undefined);
     a.send('shisha'); assert.match((await a.until(m => m.type === 'error')).message, /Pause/);
+  } finally { for (const ws of clients) ws.terminate(); await app.close(); }
+});
+
+test('four real clients exchange private team questions, reject forged answers and see Buj plus invalid Mshile feedback', async () => {
+  const app = createApplication({ port: 0 }); await app.listen();
+  const base = `http://127.0.0.1:${app.server.address().port}`, clients = [];
+  async function client(name) {
+    const post = async (path, data, token = '') => (await fetch(base + path, { method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) })).json();
+    const login = await post('/api/login', { name }), ticket = await post('/api/ticket', {}, login.token);
+    const ws = new WebSocket(base.replace('http', 'ws') + '/socket?ticket=' + ticket.ticket, { origin: base }); clients.push(ws);
+    const queue = [], waiters = [], received = [];
+    ws.on('message', raw => { const m = JSON.parse(raw); received.push(m); if (waiters.length) waiters.shift()(m); else queue.push(m); });
+    const next = () => queue.length ? Promise.resolve(queue.shift()) : new Promise((resolve, reject) => { const timer = setTimeout(() => reject(Error('No socket response')), 4000); waiters.push(m => { clearTimeout(timer); resolve(m); }); });
+    const until = async check => { for (let i = 0; i < 40; i++) { const m = await next(); if (check(m)) return m; } throw Error('No matching response'); };
+    await until(m => m.type === 'ready');
+    return { id: login.user.id, received, send: (type, data = {}) => ws.send(JSON.stringify({ type, ...data })), until };
+  }
+  try {
+    const a = await client('Ali'), b = await client('B'), c = await client('C'), d = await client('D');
+    a.send('create', { mode: 'teams', roundLimit: 5 }); const { room: lobby } = await a.until(m => m.room?.code);
+    for (const [i, player] of [b, c, d].entries()) { player.send('join', { code: lobby.code }); await player.until(m => m.room?.players.length === i + 2); }
+    a.send('start'); for (const player of [a, b, c, d]) await player.until(m => m.room?.status === 'playing');
+    a.send('team-ask', { question: 'close', to: b.id });
+    const { room: questionState } = await c.until(m => m.room?.teamMessage?.question === 'close');
+    const message = questionState.teamMessage;
+    assert.equal(message.to, c.id); assert.equal(message.from, a.id);
+    b.send('team-answer', { messageId: message.id, answer: 'yes' });
+    assert.match((await b.until(m => m.type === 'error')).message, /nicht mehr offen/);
+    c.send('team-answer', { messageId: message.id, answer: 'joker' });
+    const response = await a.until(m => m.room?.teamMessage?.answer === 'joker');
+    assert.equal(response.room.teamMessage.id, message.id);
+    a.send('gesture', { gesture: 'buj' });
+    for (const player of [a, b, c, d]) assert.equal((await player.until(m => m.room?.events.at(-1)?.gesture === 'buj')).room.events.at(-1).gesture, 'buj');
+    for (const opponent of [b, d]) {
+      assert.ok(opponent.received.filter(m => m.room).every(m => m.room.teamMessage === null));
+      assert.equal(JSON.stringify(opponent.received).includes(message.id), false);
+    }
+    const r = app.arena.roomFor(a.id);
+    r.players[0].hand = Array.from({ length: 15 }, (_, i) => ({ id: `bad-${i}`, color: 0, number: i === 14 ? 11 : 8 }));
+    a.send('discard', { tileId: 'bad-0', claim: true });
+    const error = await a.until(m => m.type === 'error');
+    assert.equal(error.code, 'invalid_claim'); assert.equal(error.message, 'A budall ie a');
+    assert.equal(r.players[0].hand.length, 15); assert.equal(r.status, 'playing');
   } finally { for (const ws of clients) ws.terminate(); await app.close(); }
 });

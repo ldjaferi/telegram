@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Arena } from './game.js';
 import { Sessions, validateTelegram } from './auth.js';
 
-const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/style.css', 'style.css'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
+const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/team-chat.js', 'team-chat.js'], ['/style.css', 'style.css'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml' };
 export function createApplication(config = {}) {
   config = { host: '127.0.0.1', port: 3200, dev: true, publicUrl: 'http://127.0.0.1:3200', allowedIds: [], allowPublic: false, ...config };
@@ -108,13 +108,15 @@ export function createApplication(config = {}) {
           else if (m.type === 'draw') arena.draw(user.id, m.source);
           else if (m.type === 'discard') arena.discard(user.id, m.tileId, m.claim === true);
           else if (m.type === 'surrender') arena.surrender(user.id);
+          else if (m.type === 'team-ask') arena.askTeam(user.id, m.question);
+          else if (m.type === 'team-answer') arena.answerTeam(user.id, m.messageId, m.answer);
           else if (m.type === 'gesture') arena.gesture(user.id, m.gesture, m.target);
           else if (m.type === 'bluff') arena.bluff(user.id);
           else if (m.type === 'shisha') arena.shisha(user.id);
           else if (m.type === 'leave') { broadcast(arena.leave(user.id)); ws.send(JSON.stringify({ type: 'state', room: null })); return; }
           else throw Error('Unbekannte Aktion.');
           broadcast(arena.roomFor(user.id));
-        } catch (error) { ws.send(JSON.stringify({ type: 'error', message: error.message })); }
+        } catch (error) { ws.send(JSON.stringify({ type: 'error', message: error.message, ...(error.code === 'invalid_claim' ? { code: error.code } : {}) })); }
       });
       ws.on('close', () => {
         if (sockets.get(user.id) !== ws) return;

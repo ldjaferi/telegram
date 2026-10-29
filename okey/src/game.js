@@ -1,7 +1,8 @@
 import { randomInt, randomBytes } from 'node:crypto';
+import { TEAM_QUESTIONS, TEAM_MESSAGE_MS } from '../public/team-chat.js';
 import { bestCombinations } from '../public/combinations.js';
 
-export const GESTURES = ['finger', 'nose', 'fart', 'tea'];
+export const GESTURES = ['finger', 'buj', 'fart', 'tea'];
 export const BLUFF_COOLDOWN_MS = 8000;
 export const SMOKE_DURATION_MS = 3000;
 export const SHISHA_COOLDOWN_MS = 15000;
@@ -136,7 +137,7 @@ export class Arena {
     while (r.players.length < 4) { const i = r.players.length - 1; r.players.push(this.player({ id: `bot-${r.code}-${i}`, name: BOT_NAMES[i] }, true)); }
     const tiles = deck();
     for (let i = tiles.length - 1; i > 0; i--) { const j = randomInt(i + 1); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
-    r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
+    r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
     r.shishaReadyAt = 0; r.nextPuffAt = this.now() + 14000 + randomInt(10000);
     for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
@@ -168,7 +169,7 @@ export class Arena {
     if (index < 0) throw Error('Dieser Stein gehört dir nicht.');
     const remaining = p.hand.filter(t => t.id !== tileId);
     const kind = winningHand(remaining);
-    if (claim && !kind) throw Error('Fast! Deine übrigen 14 Steine bilden noch keine gültige Hand.');
+    if (claim && !kind) throw Object.assign(Error('A budall ie a'), { code: 'invalid_claim' });
     const [tile] = p.hand.splice(index, 1); r.discards[r.turn].push(tile); r.lastDiscard = { seat: r.turn }; r.lastDiscards[r.turn] = { tile, taken: false };
     this.event(r, 'discard', { player: id });
     if (claim && kind) { this.finish(r, p, kind, isWild(tile)); return; }
@@ -203,10 +204,44 @@ export class Arena {
   surrender(id) {
     const r = this.roomFor(id); const p = r?.players.find(p => p.id === id);
     if (!r || r.status !== 'playing' || p.out) throw Error('Du bist nicht in einer laufenden Runde.');
+    if (r.teamMessages) delete r.teamMessages[r.players.indexOf(p) % 2];
     p.out = true; this.event(r, 'throw', { player: id, name: p.name });
     if (this.onlyOneSide(r)) this.finish(r, r.players.find(p => !p.out), 'last');
     else if (r.players[r.turn].id === id) this.next(r);
     return r;
+  }
+  teamPair(id) {
+    const r = this.roomFor(id), seat = r?.players.findIndex(p => p.id === id);
+    const me = r?.players[seat], partner = r?.players[(seat + 2) % 4];
+    if (!r || r.mode !== 'teams' || r.status !== 'playing' || !me || me.out) throw Error('Teamfragen sind nur in einer laufenden Teamrunde möglich.');
+    if (!partner || partner.bot || partner.out) throw Error('Dafür brauchst du einen mitspielenden menschlichen Teampartner.');
+    return { r, me, partner, team: seat % 2 };
+  }
+  askTeam(id, question) {
+    const { r, me, partner, team } = this.teamPair(id);
+    if (typeof question !== 'string' || !Object.hasOwn(TEAM_QUESTIONS, question)) throw Error('Unbekannte Teamfrage.');
+    if (!partner.connected) throw Error('Dein Teampartner ist gerade nicht verbunden.');
+    const previous = r.teamMessages?.[team];
+    if (previous && previous.expiresAt > this.now() && !previous.answer) throw Error('Eure letzte Frage wartet noch auf eine Antwort.');
+    if (this.now() - (me.lastTeamQuestion ?? -Infinity) < 3000) throw Error('Warte kurz vor der nächsten Teamfrage.');
+    me.lastTeamQuestion = this.now();
+    r.teamMessages ||= {};
+    r.teamMessages[team] = { id: randomBytes(8).toString('hex'), from: id, to: partner.id, question, answer: null, at: this.now(), expiresAt: this.now() + TEAM_MESSAGE_MS };
+    r.touched = this.now();
+  }
+  answerTeam(id, messageId, answer) {
+    const { r, team } = this.teamPair(id), message = r.teamMessages?.[team];
+    if (!message || message.id !== messageId || message.to !== id || message.answer || message.expiresAt <= this.now()) throw Error('Diese Teamfrage ist nicht mehr offen.');
+    if (typeof answer !== 'string' || !Object.hasOwn(TEAM_QUESTIONS[message.question].answers, answer)) throw Error('Unbekannte Antwort.');
+    message.answer = answer; message.answeredAt = this.now(); message.expiresAt = this.now() + TEAM_MESSAGE_MS;
+    r.touched = this.now();
+  }
+  teamMessage(r, id) {
+    if (r.status !== 'playing' || r.mode !== 'teams') return null;
+    const seat = r.players.findIndex(p => p.id === id), message = r.teamMessages?.[seat % 2];
+    if (!message || message.expiresAt <= this.now() || ![message.from, message.to].includes(id)) return null;
+    if (![message.from, message.to].every(id => r.players.some(p => p.id === id && !p.out && !p.bot))) return null;
+    return { ...message };
   }
   gesture(id, gesture, target) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
@@ -234,6 +269,7 @@ export class Arena {
   leave(id) {
     const r = this.roomFor(id); if (!r) return null;
     const p = r.players.find(p => p.id === id);
+    if (r.teamMessages) delete r.teamMessages[r.players.indexOf(p) % 2];
     if (r.status === 'playing' && !p.out) this.surrender(id);
     // A departing player becomes a vacant, surrendered seat until the round ends.
     if (r.round > 0) { p.id = `left-${randomBytes(4).toString('hex')}`; p.bot = true; p.connected = false; }
@@ -278,7 +314,7 @@ export class Arena {
     return {
       code: r.code, owner: r.owner, status: r.status, round: r.round, turn: r.turn, phase: r.phase,
       mode: r.mode, roundLimit: r.roundLimit, roundLimitChosen: r.roundLimitChosen, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
-      lastDraw: me?.lastDraw || null, rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
+      teamMessage: this.teamMessage(r, id), lastDraw: me?.lastDraw || null, rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
       hand: me?.hand || [], players: r.players.map((p, seat) => ({ seat, team: seat % 2, id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, count: p.hand.length, wins: p.wins })),
       canBluff: Boolean(r.status === 'playing' && me && !me.out && me.hand.some(tile => isWild(tile))),
       bluffReadyAt: Math.max(Number.isFinite(me?.lastBluff) ? me.lastBluff + BLUFF_COOLDOWN_MS : 0, Number.isFinite(me?.lastGesture) ? me.lastGesture + 2500 : 0),

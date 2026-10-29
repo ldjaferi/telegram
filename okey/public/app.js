@@ -1,3 +1,4 @@
+import { TEAM_QUESTIONS } from './team-chat.js';
 import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
 import { TableMusic, shishaBubbles } from './music.js';
@@ -11,9 +12,10 @@ const colors = ['Rot', 'Gelb', 'Blau', 'Schwarz'];
 const tableNames = ['Te Ramizi', 'Te Fadili', 'Te Agroni', 'Te Iliri', 'Te Arbëni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ahmedi', 'Te Omari', 'Te Hasani', 'Te Khalidi', 'Te Jusufi', 'Te Karimi', 'Te Samiri', 'Te Tariku'];
 const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
 const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
-const gestureArt = { finger: '🖕', nose: '👃👋', fart: '💨', tea: '☕' };
-const gestureCopy = { finger: 'sendet liebe Grüsse', nose: 'macht eine lange Nase', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
+const gestureArt = { finger: '🖕', buj: '🌚', fart: '💨', tea: '☕' };
+const gestureCopy = { finger: 'sendet liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
 let room = null, user = null, socket = null, config = null, selected = null, order = [], target = null, lastEvent = 0, roomCode = null, connected = false, reconnectTimer, toastTimer, eventTimer, serverOffset = 0;
+let lastTeamVersion = '', teamMessageTimer;
 let newTileId = null, newTileKey = '', newTileTimer, jokerTimer;
 let muted = localStorage.getItem('okey-muted') === 'true', audio, music;
 let audioUnlocked = false, suppressClickUntil = 0;
@@ -55,7 +57,7 @@ const demoHand = [
 const me = () => room?.players.find(p => p.id === user?.id);
 const myTurn = () => connected && room?.status === 'playing' && !me()?.out && room.players[room.turn]?.id === user?.id;
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 3800); }
-function modal(html) { $('#modal-content').dataset.view = ''; $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
+function modal(html) { $('#modal-content').dataset.view = ''; delete $('#modal-content').dataset.messageId; $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
 $('#close-modal').onclick = () => $('#modal').close();
 $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) { const r = $('#modal').getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $('#modal').close(); } });
 
@@ -100,6 +102,42 @@ function send(type, data = {}) {
   if (socket?.readyState !== WebSocket.OPEN) return toast('Die Verbindung wird gerade wiederhergestellt.');
   socket.send(JSON.stringify({ type, ...data }));
 }
+function currentTeamMessage() {
+  const message = room?.teamMessage;
+  return message && message.expiresAt > Date.now() + serverOffset ? message : null;
+}
+function showTeamMessage(message) {
+  const question = TEAM_QUESTIONS[message.question];
+  const incoming = message.to === user.id;
+  const partner = room.players.find(p => p.id === (incoming ? message.from : message.to));
+  const answers = incoming && !message.answer
+    ? `<div class="team-choices">${Object.entries(question.answers).map(([key, label]) => `<button class="button primary" data-team-answer="${key}" data-message-id="${esc(message.id)}">${esc(label)}</button>`).join('')}</div>`
+    : `<p class="team-reply">${message.answer ? esc(question.answers[message.answer]) : 'Warte auf die Antwort …'}</p><button class="button secondary" data-action="dismiss-message">Weiter spielen</button>`;
+  modal(`<p class="eyebrow">NUR FÜR EUER TEAM</p><p>${incoming ? 'Von' : 'An'} ${esc(partner?.name)}</p><h2>${esc(question.text)}</h2>${answers}`);
+  $('#modal-content').dataset.view = 'team';
+  $('#modal-content').dataset.messageId = message.id;
+}
+function syncTeamMessage() {
+  const message = currentTeamMessage(), content = $('#modal-content');
+  clearTimeout(teamMessageTimer);
+  if (!message) {
+    lastTeamVersion = '';
+    if (content.dataset.view === 'team' && (content.dataset.messageId || room?.status !== 'playing' || me()?.out)) $('#modal').close();
+    return;
+  }
+  const version = `${message.id}:${message.answer || 'pending'}`;
+  if (version !== lastTeamVersion) { lastTeamVersion = version; showTeamMessage(message); }
+  teamMessageTimer = setTimeout(() => {
+    if (content.dataset.view === 'team' && content.dataset.messageId === message.id) $('#modal').close();
+  }, Math.max(0, message.expiresAt - Date.now() - serverOffset));
+}
+function teamMenu(partner) {
+  if (room.status !== 'playing' || me()?.out || partner.out) return toast('Teamfragen sind nur in einer laufenden Teamrunde möglich.');
+  const message = currentTeamMessage();
+  if (message && !message.answer) { showTeamMessage(message); return; }
+  modal(`<h2>Was möchtest du ${esc(partner.name)} mitteilen?</h2><p>Nur dein Teampartner sieht diese Frage.</p><div class="team-choices">${Object.entries(TEAM_QUESTIONS).map(([key, question]) => `<button class="button primary" data-team-question="${key}">${esc(question.text)}</button>`).join('')}</div><button class="button secondary" data-team-target="${esc(partner.id)}">Geste an ${esc(partner.name)} richten</button>`);
+  $('#modal-content').dataset.view = 'team';
+}
 async function post(path, data = {}) {
   const response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) });
   const result = await response.json(); if (!response.ok) { const error = Error(result.error); error.status = response.status; throw error; } return result;
@@ -118,7 +156,13 @@ async function connect() {
     socket = new WebSocket(socketUrl);
     socket.onmessage = e => {
       const message = JSON.parse(e.data);
-      if (message.type === 'error') return toast(message.message);
+      if (message.type === 'error') {
+        if (message.code === 'invalid_claim') {
+          modal('<div class="invalid-claim"><span aria-hidden="true">😵‍💫</span><h2>A budall ie a</h2><p>Deine Steine bilden noch keine vollständige Gewinnhand.</p><button class="button primary" data-action="dismiss-message">Weiter spielen</button></div>');
+          telegram?.HapticFeedback?.notificationOccurred('error');
+        } else toast(message.message);
+        return;
+      }
       if (message.type === 'ready') { connected = true; user = message.user; $('#connection').textContent = config.dev ? 'LOKAL AM TISCH' : 'AM TISCH'; }
       if (message.type === 'ready' || message.type === 'state') {
         const next = message.room;
@@ -127,7 +171,7 @@ async function connect() {
         markDraw(next);
         room = next;
         if (room) serverOffset = room.serverNow - Date.now();
-        render();
+        render(); syncTeamMessage();
         if (room) for (const event of room.events) if (event.seq > lastEvent) { lastEvent = event.seq; if (Date.now() + serverOffset - event.at < 4500) showEvent(event); }
         if (message.type === 'ready') {
           const start = telegram?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('tgWebAppStartParam') || user.startParam || '';
@@ -162,7 +206,7 @@ function renderSeats() {
     const p = room?.players[seatIndex] || (!room ? { name: ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'][offset - 1], bot: true, count: 14, preview: true } : null);
     const seat = $(`#seat-${position}`);
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
-    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)} als Ziel für Gesten wählen" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}${room?.mode === 'teams' ? ` · Team ${p.team === 0 ? 'A' : 'B'}` : ''}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}${room?.mode === 'teams' ? ` · Team ${p.team === 0 ? 'A' : 'B'}` : ''}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
 }
 function renderCenter() {
@@ -287,8 +331,13 @@ function showEvent(event) {
     $('#table-event').innerHTML = `<div class="event-card joker-bluff"><span class="bluff-kicker">JOKER-BLUFF</span><span class="bluff-star left" aria-hidden="true">✦</span><img class="bluff-chest" src="bluff.svg" alt="Eine leicht behaarte Comic-Männerbrust wackelt"><span class="bluff-star right" aria-hidden="true">✦</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'zeigst' : 'zeigt'} Brust.</span><strong class="bluff-claim">„Ich hab einen Joker!“</strong></div>`;
   } else {
     sound(event.gesture === 'fart' ? 'fart' : 'gesture');
+    if (event.gesture === 'buj') {
+      $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">Ihr sind alles Opfer und chömed i dhölll</span><small>${esc(event.name)}</small></div>`;
+      eventTimer = setTimeout(() => { $('#table-event').replaceChildren(); }, 4500);
+      return;
+    }
     const recipient = event.target ? room.players.find(p => p.id === event.target)?.name : null;
-    const copy = event.name === 'Du' ? { finger: 'sendest liebe Grüsse', nose: 'machst eine lange Nase', fart: 'warst es ganz bestimmt nicht', tea: 'gibst einen Çay aus' }[event.gesture] : gestureCopy[event.gesture];
+    const copy = event.name === 'Du' ? { finger: 'sendest liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', fart: 'warst es ganz bestimmt nicht', tea: 'gibst einen Çay aus' }[event.gesture] : gestureCopy[event.gesture];
     $('#table-event').innerHTML = `<div class="event-card ${event.gesture}"><span class="event-emoji">${gestureArt[event.gesture]}</span><span class="event-copy">${esc(event.name)} ${copy}${recipient ? `<br>Für ${esc(recipient)}.` : '.'}</span></div>`;
   }
   telegram?.HapticFeedback?.impactOccurred('light');
@@ -309,9 +358,19 @@ async function invite() {
   catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
 }
 document.addEventListener('click', e => {
+  const question = e.target.closest('[data-team-question]');
+  if (question) { send('team-ask', { question: question.dataset.teamQuestion }); $('#modal').close(); return; }
+  const answer = e.target.closest('[data-team-answer]');
+  if (answer) { send('team-answer', { messageId: answer.dataset.messageId, answer: answer.dataset.teamAnswer }); $('#modal').close(); return; }
+  const teammate = e.target.closest('[data-team-target]');
+  if (teammate) { target = teammate.dataset.teamTarget; $('#modal').close(); render(); return; }
   const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target }); return; }
-  const player = e.target.closest('[data-target]'); if (player?.dataset.target) { target = target === player.dataset.target ? null : player.dataset.target; render(); return; }
+  const player = e.target.closest('[data-target]'); if (player?.dataset.target) {
+    const other = room?.players.find(p => p.id === player.dataset.target);
+    if (room?.mode === 'teams' && other && other.team === me()?.team && !other.bot) { teamMenu(other); return; }
+    target = target === player.dataset.target ? null : player.dataset.target; render(); return; }
   const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'dismiss-message') { $('#modal').close(); return; }
   if (action === 'solo' || action === 'create') setupTable(action === 'solo');
   else if (action === 'start') send('start');
   else if (action === 'settings') setupTable(false, true);
@@ -347,7 +406,7 @@ $('#leave').onclick = () => {
   modal('<h2>Schon Feierabend?</h2><p>Beim Verlassen gibst du diese Runde auf. Die anderen spielen weiter.</p><button id="confirm-leave" class="button primary">Tisch verlassen</button>');
   $('#confirm-leave').onclick = () => { send('leave'); $('#modal').close(); };
 };
-$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf einen Mitspieler, um Gesten gezielt zu schicken. Nochmals tippen bedeutet: an alle.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
+$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf deinen menschlichen Teampartner für die privaten Fragen „A ta msheli“ und „Si je?“. Gegner kannst du weiterhin als Ziel für Gesten auswählen.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
 
 render(); connect();
 
@@ -355,13 +414,13 @@ function markDraw(next) {
   const draw = next?.lastDraw, key = draw ? `${next.code}:${next.matchNumber}:${next.round}:${draw.id}:${draw.at}` : '';
   if (key === newTileKey) return;
   clearTimeout(newTileTimer); newTileKey = key; newTileId = null;
-  const remaining = draw ? 2000 - (next.serverNow - draw.at) : 0;
+  const remaining = draw ? 4000 - (next.serverNow - draw.at) : 0;
   if (remaining <= 0 || !next.hand.some(t => t.id === draw.id)) return;
   newTileId = draw.id;
   newTileTimer = setTimeout(() => {
     newTileId = null;
     for (const el of document.querySelectorAll('.newly-drawn')) { el.classList.remove('newly-drawn'); el.querySelector('.new-tile-badge')?.remove(); }
-  }, Math.min(2000, remaining));
+  }, Math.min(4000, remaining));
 }
 function scoreLabel(index) { return room.mode === 'teams' ? `Team ${index === 0 ? 'A' : 'B'}` : room.players[index]?.name || `Platz ${index + 1}`; }
 function matchTitle() { return room.matchWinners.length > 1 ? 'Partie unentschieden!' : `${esc(scoreLabel(room.matchWinners[0]))} gewinnt die Partie!`; }
