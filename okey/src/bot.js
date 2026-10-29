@@ -19,8 +19,8 @@ export function botReply(config, message, arena) {
       const owner = room.players.find(p => p.id === room.owner)?.name || 'Der Gastgeber';
       text = room.status === 'playing'
         ? 'An eurem Tisch läuft bereits eine Runde. Wer mitspielt, kann hier zurück an den Tisch.'
-        : `Euer Okey-Tisch wartet!\nTippt auf „Am Tisch teilnehmen“ – ihr kommt alle an denselben Tisch.\n${owner} startet die Runde, sobald ihr bereit seid. Maximal vier Spieler.`;
-      reply_markup = { inline_keyboard: [[{ text: 'Am Tisch teilnehmen 🀄', url: `https://t.me/${config.botUsername}?startapp=room_${room.code}` }]] };
+        : `Tavolina esht gati.\nTippt auf „Hajde bojrum“ – ihr kommt alle an denselben Tisch.\n${owner} startet die Runde, sobald ihr bereit seid. Maximal vier Spieler.`;
+      reply_markup = { inline_keyboard: [[{ text: 'Hajde bojrum', url: `https://t.me/${config.botUsername}?startapp=room_${room.code}` }]] };
     } catch (error) { text = error.message; }
   }
   else {
