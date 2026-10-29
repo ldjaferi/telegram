@@ -190,3 +190,19 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - HTTPS app.js/style.css hashgleich geprüft; okey und gamebot aktiv.
 - sudo-Sperre nach Installation wiederhergestellt.
 - Rückfallverzeichnis: /opt/okey-before-144b3a9-20261029T142420Z
+
+29.10.2026 — Teamfragen und Spielreaktionen live (55bd1c7)
+- Ungültiges Mshile: grosser Dialog „A budall ie a“, Hand/Zug unverändert.
+- Lange Nase ersetzt durch Buj Modus mit 🌚 und gewünschter Ansage.
+- Neue Steine vier statt zwei Sekunden markiert.
+- Gegenüberliegenden menschlichen Partner antippen: A ta msheli / Si je?
+  mit festen Antworten. Nur beide Teammitglieder erhalten die Nachricht;
+  Server prüft Empfänger, Antworten, Frist und aktive Teamzugehörigkeit.
+- 48 Tests lokal und VPS bestanden, inklusive vier echter WS-Clients.
+- DOM/HTTP/WS-Bedienungstest: beide Teamdialoge, Antwort, Buj, ungültiger
+  Abschluss, Vier-Sekunden-Markierung und bestehender Partiestart geprüft.
+  Kein visueller Browsertest (Browser-Download weiterhin nicht verfügbar).
+- Öffentliches HTTPS: app.js, style.css, team-chat.js und index.html
+  hashgleich mit Release; healthz erfolgreich; okey und gamebot aktiv.
+- sudo-Sperre nach Installation wiederhergestellt.
+- Rückfallverzeichnis: /opt/okey-before-55bd1c7-20261029T144528Z
