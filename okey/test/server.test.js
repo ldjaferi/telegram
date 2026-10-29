@@ -4,6 +4,52 @@ import { WebSocket } from 'ws';
 import { createApplication } from '../src/server.js';
 import { createHmac } from 'node:crypto';
 import { isWild } from '../src/game.js';
+import { botReply } from '../src/bot.js';
+
+test('group invitation connects signed Telegram colleagues to the waiting table without entering a code', async () => {
+  const botToken = 'group-invitation-test-token', origin = 'https://example.test';
+  const app = createApplication({ dev: false, port: 0, publicUrl: origin + '/okey', botUsername: 'GoyimGjurzi_bot', botToken, allowPublic: true });
+  await app.listen(); const base = `http://127.0.0.1:${app.server.address().port}/okey`; const clients = [];
+  const reply = botReply(app.config, { text: '/nisja', from: { id: 42, first_name: 'Ali' }, chat: { id: -100, type: 'supergroup' } }, app.arena);
+  const startParam = new URL(reply.reply_markup.inline_keyboard[0][0].url).searchParams.get('startapp');
+  async function connect(id) {
+    const params = new URLSearchParams({ auth_date: String(Math.floor(Date.now() / 1000)), user: JSON.stringify({ id, first_name: `Player ${id}` }), start_param: startParam });
+    const data = [...params].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join('\n');
+    const secret = createHmac('sha256', 'WebAppData').update(botToken).digest();
+    params.set('hash', createHmac('sha256', secret).update(data).digest('hex'));
+    const post = async (path, body, token = '') => {
+      const res = await fetch(base + path, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+      assert.equal(res.status, 200); return res.json();
+    };
+    const login = await post('/api/login', { initData: params.toString() });
+    const ticket = await post('/api/ticket', {}, login.token);
+    const ws = new WebSocket(base.replace('http', 'ws') + '/socket?ticket=' + ticket.ticket, { origin }); clients.push(ws);
+    const queue = [], waiters = [];
+    ws.on('message', raw => { const m = JSON.parse(raw); if (waiters.length) waiters.shift()(m); else queue.push(m); });
+    const next = () => queue.length ? Promise.resolve(queue.shift()) : new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(Error('Socket timeout')), 4000);
+      waiters.push(m => { clearTimeout(timer); resolve(m); });
+    });
+    const until = async predicate => { for (let i = 0; i < 20; i++) { const m = await next(); if (predicate(m)) return m; } throw Error('Missing state'); };
+    const ready = await until(m => m.type === 'ready');
+    assert.equal(ready.user.startParam, startParam);
+    // This is the client's automatic invitation action after receiving ready.
+    if (!ready.room) ws.send(JSON.stringify({ type: 'join', code: startParam.slice(5) }));
+    return { ws, ready, until };
+  }
+  try {
+    const host = await connect(42);
+    assert.equal(host.ready.room.status, 'lobby'); assert.equal(host.ready.room.owner, '42');
+    const guest = await connect(99);
+    const joined = await guest.until(m => m.room?.players.length === 2);
+    assert.equal(joined.room.code, host.ready.room.code); assert.equal(joined.room.status, 'lobby');
+    await host.until(m => m.room?.players.length === 2);
+    guest.ws.send(JSON.stringify({ type: 'start' }));
+    assert.match((await guest.until(m => m.type === 'error')).message, /Gastgeber/);
+    host.ws.send(JSON.stringify({ type: 'start' }));
+    assert.equal((await guest.until(m => m.room?.status === 'playing')).room.players.length, 4);
+  } finally { for (const ws of clients) ws.terminate(); await app.close(); }
+});
 
 test('real clients: rooms, secret hands, targeted gestures, surrender, reconnect and rejected tickets', async () => {
   const app = createApplication({ port: 0 }); const addr = await app.listen(); const base = `http://127.0.0.1:${addr.port}`;

@@ -21,6 +21,17 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 - Eigene leise Hijaz-inspirierte Hintergrundmusik aus Zupftönen und sanften Trommelimpulsen, ohne Audiodownload. Beginnt nach der ersten Berührung während des Spiels, pausiert bei verborgenem Fenster oder Rundenende. ♫ schaltet Musik und Effekte gemeinsam aus; die Einstellung bleibt gespeichert. Reduzierte Animationen bei entsprechender Systemeinstellung.
 - 120 Sekunden pro Zug (Ziehen und Abwerfen zusammen), danach automatische Aktion. Wiederverbindung über dieselbe Sitzung; Telegram-Identitäten finden ihren Tisch auch nach neuer Anmeldung wieder.
 
+## Gemeinsam aus dem Gruppenchat starten
+
+1. Den Bot zur Telegram-Gruppe hinzufügen und dort `/nisja` senden (bei mehreren Bots `/nisja@GoyimGjurzi_bot`).
+2. Der Bot erstellt sofort eine Lobby und reserviert den Gastgeberplatz für den Absender. Seine Gruppenantwort enthält **Am Tisch teilnehmen**.
+3. Alle Teilnehmer öffnen diesen Knopf. Der Link öffnet die Main Mini App und übergibt den Tisch automatisch; niemand muss einen Code eingeben. Der Gastgeber sieht die beitretenden Kollegen.
+4. Der Gastgeber drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
+
+Weitere `/nisja` derselben Gruppe verweisen auf denselben Tisch. Während einer laufenden Runde können vorhandene Teilnehmer zurückkehren; neue Spieler können erst nach der Runde beitreten, sofern Plätze frei sind. Wer bereits an einem anderen Tisch sitzt, muss diesen zuerst verlassen. Ein Tisch wird nicht automatisch zwischen Gruppen geteilt. Nach dem Verlassen aller Menschen oder nach zwei Stunden Inaktivität kann `/nisja` einen neuen Tisch erstellen. Wie bisher gehen Tische bei einem Serverneustart verloren.
+
+Vor dem Live-Einsatz: Main Mini App in BotFather aktivieren und den geänderten Okey-Dienst bereitstellen. Danach mit zwei echten Telegram-Konten in einer Gruppe prüfen: Gruppenknopf → gemeinsamer Tisch → Gastgeber startet. Die lokale Integration prüft Bot-Antwort, signierte Telegram-Anmeldung, WebSockets und den gemeinsamen Tisch; sie ersetzt diese Telegram-Geräteprüfung nicht.
+
 ## Lokal spielen
 
 Node.js 24 und pnpm 11:
@@ -39,7 +50,7 @@ Alternativ `npm install`, `npm test`, `npm start`. Es gibt keinen Build-Schritt.
 2. Eine HTTPS-Adresse über den bestehenden Reverse Proxy auf `127.0.0.1:3200` zeigen lassen. `PUBLIC_URL` darf einen Unterpfad enthalten. Aktuell läuft Okey unter `https://goyim.xhaferi.al/okey`; der Proxy leitet `/okey` und `/okey/*` ohne Entfernen des Präfixes weiter. Caddy übernimmt WebSocket-Upgrades automatisch.
 3. `.env.example` als `/etc/okey/config` speichern. `PUBLIC_URL`, `BOT_USERNAME` (ohne @) und `ALLOWED_TELEGRAM_IDS` setzen. Standardmässig sind nur eingetragene Telegram-IDs zugelassen. `ALLOW_PUBLIC_PLAY=true` erlaubt bewusst alle Telegram-Konten.
 4. Den neuen Bot-Token ausschliesslich auf dem Server in `/etc/okey/bot-token` speichern (root, 0600). `deploy/okey.service` verwendet systemd `LoadCredential`. Der Token wird für die Prüfung der Telegram-Anmeldung gebraucht, nicht an Browser ausgegeben.
-5. Der Dienst setzt Menüknopf, Beschreibung und `/nisja`, `/help`, `/id` automatisch. `/start` und private Spielknöpfe öffnen die Mini App. Einladungen verwenden `https://t.me/BOT_USERNAME?start=room_ABCDEF`; eine Main-Mini-App-Konfiguration in BotFather ist dafür nicht nötig. Sie bleibt optional für einen zusätzlichen Startknopf im Bot-Profil.
+5. In **@BotFather → /mybots → @GoyimGjurzi_bot → Bot Settings → Configure Mini App** die **Main Mini App** aktivieren und `https://goyim.xhaferi.al/okey/` als URL setzen. Dies ist für den direkten Gruppenstart erforderlich und wird nicht durch `setChatMenuButton` eingerichtet. Der Dienst setzt Menüknopf, Beschreibung und `/nisja`, `/help`, `/id` automatisch. Einladungen verwenden `https://t.me/BOT_USERNAME?startapp=room_ABCDEF`. Telegram kann beim ersten Öffnen eine Bestätigung anzeigen; der Umweg über den privaten Bot-Chat entfällt. Alte `?start=room_ABCDEF`-Einladungen bleiben kompatibel.
 6. Den Dienst nach Prüfung der Pfade installieren und starten. `/healthz` liefert den Status. Danach mit echten Telegram-Konten auf iOS und Android testen.
 
 Aktuelle Aufteilung im vorhandenen Caddy-Site-Block:

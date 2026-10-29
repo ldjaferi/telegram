@@ -126,10 +126,11 @@ async function connect() {
         if (room) serverOffset = room.serverNow - Date.now();
         render();
         if (room) for (const event of room.events) if (event.seq > lastEvent) { lastEvent = event.seq; if (Date.now() + serverOffset - event.at < 4500) showEvent(event); }
-        if (message.type === 'ready' && !room) {
-          const start = telegram?.initDataUnsafe?.start_param || '';
+        if (message.type === 'ready') {
+          const start = telegram?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('tgWebAppStartParam') || user.startParam || '';
           const code = new URLSearchParams(location.search).get('room') || (/^room_([A-Fa-f0-9]{6})$/.exec(start)?.[1]);
-          if (code) send('join', { code });
+          if (code && !room) send('join', { code });
+          else if (code && room.code !== code.toUpperCase()) toast('Du sitzt noch an einem anderen Tisch. Verlasse ihn über „Mehr“ und öffne danach die Einladung erneut.');
         }
       }
     };
@@ -298,7 +299,7 @@ function showWinningHand(){
 }
 
 async function invite() {
-  const link = config.botUsername ? `https://t.me/${config.botUsername}?start=room_${room.code}` : `${appBase.href}?room=${room.code}`;
+  const link = config.botUsername ? `https://t.me/${config.botUsername}?startapp=room_${room.code}` : `${appBase.href}?room=${room.code}`;
   try { await navigator.clipboard.writeText(link); toast(`${tableName(room.code)}: Einladung kopiert. Tischcode: ${room.code}`); }
   catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
 }

@@ -2,7 +2,7 @@ import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-export function botReply(config, message) {
+export function botReply(config, message, arena) {
   if (!message?.from?.id || message.from.is_bot || !message.chat?.id || typeof message.text !== 'string') return null;
   const [raw, parameter] = message.text.trim().split(/\s+/), [command, target] = raw.split('@');
   if (target && target.toLowerCase() !== config.botUsername.toLowerCase()) return null;
@@ -12,13 +12,24 @@ export function botReply(config, message) {
   if (command === '/id') text = `Deine Telegram-ID: ${id}`;
   else if (!allowed) text = `Dieser Okey-Tisch ist noch privat. Deine Telegram-ID für die Freischaltung: ${id}`;
   else if (command === '/help') text = 'Okey mit festen Jokern: Ziehen, abwerfen, 14 Steine zu Reihen, Gruppen oder sieben Paaren ordnen. Mit /nisja geht es an den Tisch. Freie Plätze übernehmen Computer. Brettwerfen gibt die Runde auf – die anderen spielen weiter. Gesten inklusive.';
+  else if (['group', 'supergroup'].includes(message.chat.type) && ['/nisja', '/play'].includes(command)) {
+    try {
+      if (!arena) throw Error('Der Spielserver ist gerade nicht bereit. Bitte versuche es später erneut.');
+      const room = arena.groupTable({ id, name: String(message.from.first_name || message.from.username || 'Spieler').slice(0, 32) }, message.chat.id);
+      const owner = room.players.find(p => p.id === room.owner)?.name || 'Der Gastgeber';
+      text = room.status === 'playing'
+        ? 'An eurem Tisch läuft bereits eine Runde. Wer mitspielt, kann hier zurück an den Tisch.'
+        : `Euer Okey-Tisch wartet!\nTippt auf „Am Tisch teilnehmen“ – ihr kommt alle an denselben Tisch.\n${owner} startet die Runde, sobald ihr bereit seid. Maximal vier Spieler.`;
+      reply_markup = { inline_keyboard: [[{ text: 'Am Tisch teilnehmen 🀄', url: `https://t.me/${config.botUsername}?startapp=room_${room.code}` }]] };
+    } catch (error) { text = error.message; }
+  }
   else {
     const code = /^room_([a-f0-9]{6})$/i.exec(parameter || '')?.[1].toUpperCase();
     const url = `${config.publicUrl.replace(/\/$/, '')}/${code ? '?room=' + code : ''}`;
     text = code ? `Dein Platz an Tisch ${code} wartet. Komm dazu!` : 'OKEY — ABER FRECH.\nSchöne Steine. Schlechte Manieren.\nSpiel mit Freunden oder gegen drei Computergegner.';
     reply_markup = { inline_keyboard: [[message.chat.type === 'private'
       ? { text: 'Okey spielen ↗', web_app: { url } }
-      : { text: 'Okey im Bot öffnen ↗', url: `https://t.me/${config.botUsername}?start=${code ? 'room_' + code : 'nisja'}` }]] };
+      : { text: 'Okey spielen ↗', url: `https://t.me/${config.botUsername}?startapp=${code ? 'room_' + code : 'nisja'}` }]] };
   }
   return { chat_id: message.chat.id, text, ...(reply_markup ? { reply_markup } : {}) };
 }
@@ -39,7 +50,7 @@ export async function configureBot(config, call) {
   await call('setMyShortDescription', { short_description: 'Okey mit festen Jokern. Holzbretter, freche Gesten und Freunde am Tisch. Jetzt spielen!' });
 }
 
-export async function runBot(config, signal) {
+export async function runBot(config, signal, arena) {
   const call = async (method, payload) => {
     try {
       const response = await fetch(`https://api.telegram.org/bot${config.botToken}/${method}`, {
@@ -62,7 +73,7 @@ export async function runBot(config, signal) {
     try {
       const updates = await call('getUpdates', { offset, timeout: 25, allowed_updates: ['message'] });
       for (const update of updates) {
-        const reply = botReply(config, update.message);
+        const reply = botReply(config, update.message, arena);
         if (reply) await call('sendMessage', reply);
         offset = update.update_id + 1;
         await writeFile(offsetFile + '.tmp', String(offset), { mode: 0o600 });

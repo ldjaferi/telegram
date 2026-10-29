@@ -81,6 +81,16 @@ export function botDiscard(hand) {
 export class Arena {
   constructor({ now = () => Date.now(), turnMs = 120000 } = {}) { this.rooms = new Map(); this.now = now; this.turnMs = turnMs; }
   roomFor(id) { return [...this.rooms.values()].find(r => r.players.some(p => p.id === id)); }
+  groupTable(user, chatId) {
+    const group = String(chatId);
+    const existing = [...this.rooms.values()].find(r => r.groupChatId === group);
+    if (existing) { existing.touched = this.now(); return existing; }
+    if (this.roomFor(user.id)) throw Error('Du sitzt bereits an einem anderen Tisch. Verlasse ihn zuerst im Spiel und sende dann erneut /nisja.');
+    const room = this.create(user);
+    room.groupChatId = group;
+    room.players[0].connected = false;
+    return room;
+  }
   player(user, bot = false) { return { id: user.id, name: user.name, bot, hand: [], out: false, wins: 0, connected: true, lastGesture: -Infinity }; }
   create(user, solo = false) {
     if (this.roomFor(user.id)) throw Error('Verlasse zuerst deinen aktuellen Tisch.');

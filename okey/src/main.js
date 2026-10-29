@@ -15,7 +15,7 @@ const app = createApplication({
 });
 await app.listen(); console.log(`OKEY, ABER FRECH. ${app.config.publicUrl}`);
 const controller = new AbortController();
-const botTask = app.config.botToken ? runBot(app.config, controller.signal).catch(error => {
+const botTask = app.config.botToken ? runBot(app.config, controller.signal, app.arena).catch(error => {
   if (!controller.signal.aborted) { console.error(error.message); process.exitCode = 1; controller.abort(); return app.close(); }
 }) : Promise.resolve();
 let stopping = false;
