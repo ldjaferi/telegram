@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 190" fill="none">
+  <title>Leicht behaarte Comic-Männerbrust mit weichen, vollen Formen</title>
+  <defs>
+    <radialGradient id="skin" cx=".35" cy=".28" r=".85"><stop stop-color="#f1c09a"/><stop offset=".65" stop-color="#dda17c"/><stop offset="1" stop-color="#bd7d5d"/></radialGradient>
+    <radialGradient id="chest" cx=".38" cy=".32" r=".78"><stop stop-color="#f5c7a3"/><stop offset=".55" stop-color="#e7ae88"/><stop offset="1" stop-color="#bf805f"/></radialGradient>
+  </defs>
+  <path d="M105 10v18c-4 10-20 12-37 17-26 8-38 24-42 48l-9 39c11 8 23 10 34 7l5 35c46 12 100 12 146 0l6-35c14 3 26 0 35-7l-9-39c-4-24-16-40-42-48-17-5-32-7-36-17V10" fill="url(#skin)" stroke="#644535" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M109 23c6 8 10 11 21 11s17-3 23-11M68 51c15 0 27 5 37 10m50 0c10-5 22-10 37-10" stroke="#b47d5d" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M39 76c-12 19-14 44-8 59 7 19 27 27 47 26 23-1 40-14 45-34 4-20-3-44-16-54-18-15-50-15-68 3Z" fill="url(#chest)"/>
+  <path d="M221 76c12 19 14 44 8 59-7 19-27 27-47 26-23-1-40-14-45-34-4-20 3-44 16-54 18-15 50-15 68 3Z" fill="url(#chest)"/>
+  <path d="M30 112c-3 21 4 38 24 45 17 7 36 4 50-5 11-7 17-18 19-30m107-10c3 21-4 38-24 45-17 7-36 4-50-5-11-7-17-18-19-30" stroke="#8e5b43" stroke-width="3.3" stroke-linecap="round"/>
+  <path d="M47 83c10-11 29-15 43-9m80 0c14-6 33-2 43 9" stroke="#ffdab6" stroke-width="4" stroke-opacity=".6" stroke-linecap="round"/>
+  <ellipse cx="69" cy="130" rx="10" ry="7.5" transform="rotate(8 69 130)" fill="#bd8069" fill-opacity=".8"/>
+  <ellipse cx="191" cy="130" rx="10" ry="7.5" transform="rotate(-8 191 130)" fill="#bd8069" fill-opacity=".8"/>
+  <path d="M65 131c2 4 6 4 8 0m114 0c2 4 6 4 8 0" stroke="#8f5947" stroke-width="3" stroke-linecap="round"/>
+  <g stroke="#70513c" stroke-width="2.2" stroke-linecap="round">
+    <path d="m113 63-3-5m10 8 1-6m9 10 2-6m9 3 4-6m7 1 1-6"/>
+    <path d="m46 98-3-4m12-3 1-5m33 11 3-4m9 14 2-4m57-7-3-4m9-6 1-5m37 16 3-4m9 14 2-4"/>
+    <path d="m124 163-3 5m12-5 3 5"/>
+  </g>
+</svg>

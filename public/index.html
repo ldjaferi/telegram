@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141812"><meta name="description" content="Snake Club – Multiplayer-Snake direkt in Telegram. Raum erstellen, Freunde einladen, gemeinsam spielen.">
+  <title>Snake Club · Zusammen. Länger.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script><script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="/" aria-label="Snake Club Startseite"><img src="/favicon.svg" width="37" height="37" alt=""><span>SNAKE<span class="brand-light">CLUB</span><small>TOGETHER. LONGER.</small></span></a>
+      <nav aria-label="Navigation"><button id="scores-button" class="nav-button">Rangliste <span>↗</span></button><button id="admin-button" class="nav-button" hidden>Admin <span>⚙</span></button><span id="identity" class="identity">TELEGRAM GAME</span></nav>
+    </header>
+    <main>
+      <section class="game-layout" aria-label="Spielbereich">
+        <div class="arena-panel">
+          <div class="arena-top"><div><span class="dot" id="connection-dot"></span><span id="arena-label">DEIN NÄCHSTES MATCH</span></div><div id="arena-meta">30 × 30 · CLASSIC</div></div>
+          <div class="play-area"><div class="canvas-wrap" id="canvas-wrap"><canvas id="board" width="780" height="780" aria-label="Snake-Spielfeld. Mit Pfeiltasten, Wischen oder den Richtungstasten steuern."></canvas><div id="board-overlay" class="board-overlay"><span class="overlay-kicker">DER CLUB IST OFFEN</span><strong>Hungrig?</strong><span>Deine nächste Runde wartet.</span></div><div class="board-corner">SC / 001</div><div class="game-result-actions" id="game-result-actions" hidden><button id="hud-restart" class="button primary">Nochmal spielen ↗</button><button id="hud-lobby" class="button secondary">Zur Lobby</button></div></div>
+          </div>
+          <div class="game-hud"><span id="hud-score" aria-label="Deine Punkte">0 Punkte</span><span id="hud-time">2:00</span><span id="hud-connection" hidden>Verbindung …</span><button id="hud-surrender" aria-label="Aufgeben" title="Aufgeben">×</button></div>
+          <div class="arena-bottom"><span><span class="keycap">↑</span><span class="keycap">←</span><span class="keycap">↓</span><span class="keycap">→</span> <span class="desktop-hint">Pfeiltasten oder WASD</span><span class="mobile-hint">Wischen oder Tasten</span></span><span id="latency">BEREIT, WENN DU ES BIST.</span></div>
+          <section class="touch-controls" aria-label="Richtungssteuerung"><button data-direction="up" aria-label="Oben">↑</button><button data-direction="left" aria-label="Links">←</button><button data-direction="down" aria-label="Unten">↓</button><button data-direction="right" aria-label="Rechts">→</button></section>
+        </div>
+        <aside class="side-panel">
+          <section id="welcome-view" class="welcome-view">
+            <h1>Los geht’s.</h1><p class="muted">Alleine loslegen oder Freunde einladen.</p>
+            <div id="login-panel" class="login-panel" hidden><label for="nickname">Dein Name</label><input id="nickname" maxlength="24" placeholder="Wie heisst deine Schlange?" value="Spieler"><label class="check-label"><input id="dev-admin" type="checkbox" checked> Als Test-Admin anmelden</label><button class="button primary" id="login-button">Lokal ausprobieren <span>↗</span></button><p class="small muted">Lokale Vorschau · kein Telegram-Konto nötig</p></div>
+            <div id="telegram-panel" hidden><p id="telegram-message" class="muted">Öffne das Spiel über unseren Telegram-Bot.</p><a id="telegram-link" class="button primary" hidden>In Telegram öffnen ↗</a></div>
+            <div id="play-actions" hidden><button class="button primary" id="practice-button">Jetzt alleine spielen <span>→</span></button><p class="small muted">Direkt loslegen · Solotraining ohne Wartezeit</p><button class="button secondary" id="create-button">Mit Freunden spielen <span>↗</span></button><div class="or-divider"><span>ODER MIT CODE BEITRETEN</span></div><form id="join-form" class="join-form"><label class="sr-only" for="room-code">Raumcode</label><input id="room-code" placeholder="RAUMCODE" maxlength="8" pattern="[A-Fa-f0-9]{8}" required autocomplete="off"><button class="button join-button" type="submit" aria-label="Raum beitreten">→</button></form></div>
+          </section>
+          <section id="room-view" hidden><div class="room-heading"><span class="section-number" id="room-kind">DEIN RAUM</span><button class="text-button compact" id="leave-button">Verlassen ↗</button></div><button class="button primary" id="start-button">Runde starten <span>→</span></button><p class="small muted" id="room-note"></p><div class="room-code-display" id="room-code-display"></div><p id="room-caption" class="muted">Teile den Link. Fülle die Arena.</p><button class="button secondary" id="invite-button">Einladungslink kopieren <span>↗</span></button><div class="players-header"><span>SPIELER</span><span id="player-count">0 / 8</span></div><ol class="players" id="players"></ol><button class="button secondary" id="surrender-button" hidden>Aufgeben</button></section>
+          <section class="snack-card"><div><span class="section-number">AUF DER SPEISEKARTE</span><h3 id="food-label">Knackige Pobacken</h3><p>Vom Admin serviert. Für alle.</p></div><canvas id="food-preview" width="180" height="180" aria-label="Aktuelles Fressitem"></canvas></section>
+          <div class="rules"><span>01 <b>Snacken & wachsen</b></span><span>02 <b>Kollisionen vermeiden</b></span><span>03 <b>Am längsten durchhalten</b></span><p>Bei Zeitablauf entscheiden die Punkte.<br>Training zählt nicht zur Rangliste.</p></div>
+        </aside>
+      </section>
+    </main>
+    <footer><span>SNAKE CLUB <span class="footer-slash">/</span> GOYIM.XHAFERI.AL</span><span>NO DOWNLOAD. JUST SSSNAKE. <span class="dot"></span></span></footer>
+  </div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="scores-dialog"><div class="dialog-heading"><span class="eyebrow">DIE LÄNGSTEN IM CLUB</span><button class="close-dialog" aria-label="Schliessen">×</button></div><h2>Die Rangliste.</h2><p class="muted">Multiplayer · letzte 180 Tage · beste Punktzahl</p><div id="scores-content"></div></dialog>
+  <dialog id="admin-dialog"><div class="dialog-heading"><span class="eyebrow">NUR FÜR DEN ADMIN</span><button class="close-dialog" aria-label="Schliessen">×</button></div><h2>Du gibst den Snack vor.</h2><p class="muted">Deine Auswahl gilt für alle Räume ab der nächsten Runde.</p><div class="food-options"><button class="food-option" data-food="cheeks"><canvas width="140" height="140"></canvas><strong>Pobacken</strong><span>Der Club-Klassiker</span></button><button class="food-option" data-food="cherry"><canvas width="140" height="140"></canvas><strong>Kirschen</strong><span>Fruchtige Konkurrenz</span></button><button class="food-option" data-food="star"><canvas width="140" height="140"></canvas><strong>Sterne</strong><span>Ein bisschen kosmisch</span></button></div><p id="admin-stats" class="small muted"></p><button id="save-food" class="button primary">Auswahl speichern <span>✓</span></button></dialog>
+</body>
+</html>

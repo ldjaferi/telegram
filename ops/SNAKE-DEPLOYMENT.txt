@@ -1,0 +1,72 @@
+Snake Club – ergänzender Betriebsstand, 28.10.2026
+
+Anwendung entwickelt und auf dem vorgesehenen VPS installiert.
+Domain: https://goyim.xhaferi.al
+Node: 24.22.2, offizielle Distribution mit SHA-256 geprüft, /opt/node24
+Caddy: Debian-Paket 2.6.2-12+deb13u1, öffentliches TLS-Zertifikat aktiv.
+HTTP leitet auf HTTPS weiter. A/AAAA zeigen auf die IPv4/IPv6 des VPS.
+
+gamebot.service aktiv und für Boot aktiviert, vorhandener Härtungs-Drop-in erhalten.
+Code /opt/gamebot root-eigen, Daten /var/lib/gamebot.
+Port 3100 und Caddy-Admin-Port 2019 ausschliesslich Loopback.
+TCP 80/443 in nftables und Infomaniak freigegeben.
+SSH weiterhin nur TCP/1986 von 31.10.147.51; Port 22 bleibt deaktiviert.
+Firewall-Rückfallkopie: /root/nftables-before-snake-*.conf
+
+Produktionsmodus geprüft: dev=false, Standardfutter cheeks.
+Bot @GoyimSnake_bot verbunden und Token hinterlegt. Vom Benutzer bestaetigte
+Admin-ID 8595018821 in /etc/gamebot/config eingetragen; setupRequired=false geprueft.
+ALLOW_PUBLIC_PLAY=false bleibt aktiv; weitere Mitspieler gezielt freischalten.
+Öffentliche Oberfläche ist erreichbar, Spiel- und Admin-Funktionen benötigen Anmeldung.
+Lokaler Test-Login ist in Produktion deaktiviert.
+Konfiguration /etc/gamebot/config, Token /etc/gamebot/bot-token, beide root 0600.
+Token wird über systemd LoadCredential übergeben.
+Einrichtung: sudo bash /opt/gamebot/deploy/configure-telegram.sh
+README.md beschreibt BotFather, /id und Spielerzulassung. Private /play-Buttons und
+Einladungen ueber ?start=room_CODE funktionieren ohne zusaetzliche Main Mini App.
+
+gamebot-backup.timer aktiv: täglich ca. 03:15 Europe/Zurich, 14 lokale Versionen.
+Erste Sicherung erstellt und SQLite-Integrität erfolgreich geprüft.
+Automatisierter Backup-/Wiederherstellungstest in Tests erfolgreich.
+Externe Sicherung und externe Ausfallbenachrichtigung noch offen.
+Keine Telegram-Tests auf echten iOS-/Android-Geräten möglich, solange Bot-Zugang fehlt.
+Vor grösserer Nutzung Lasttest mit tatsächlichen Spielerzahlen durchführen.
+Node-Installation separat aktualisieren; apt verwaltet diese Runtime nicht.
+
+Verifikation der Erstversion: 16 Tests lokal UND auf dem VPS bestanden; zwei Browser-Clients mit gemeinsamem
+Raum, Rundenstart, Ergebnis/Revanche und Admin-Futterwechsel geprüft.
+Mit Bot-Einstieg und Einladungsweitergabe: 21 Tests.
+
+Korrektur Spieleinstieg: "Jetzt alleine spielen" startet direkt eine Solorunde.
+Ein allein belegter Multiplayer-Raum darf ebenfalls als Training starten; ab zwei
+Spielern wird die naechste Runde als Multiplayer gewertet. Soloergebnisse bleiben
+aus der Rangliste ausgeschlossen. 23 Tests lokal und auf dem VPS bestanden;
+Direktstart und Steuerung zusaetzlich im Browser geprueft.
+
+Darstellungsoptimierung fuer Telegram auf dem Handy:
+- 30-FPS-Begrenzung entfernt; Displaytakt ueber requestAnimationFrame.
+- Bewegung zwischen bestaetigten Zustaenden mit kleinem Zeitpuffer und monotoner
+  Wiedergabe; Pakete starten die Animation nicht mehr neu.
+- Raster und Snacks zwischengespeichert, Spieleranzeige nur bei Aenderungen neu aufgebaut.
+- Wiederholte Steuerereignisse begrenzt, damit kein Verbindungsabbruch durch Eingabeflut entsteht.
+27 Tests bestanden. Lokale Browser-Messung 60 FPS; echtes Handy muss Benutzer nachpruefen.
+
+Spielansicht bildschirmfuellend umgestellt: Header, Intro, Seitenleiste, Rahmen und
+Footer verschwinden waehrend der Runde und bleiben auch am Rundenende verborgen.
+Punkte/Zeit, Steuerung und Ergebnisaktionen liegen direkt ueber dem Spielfeld.
+Telegram-Vollbild wird ab API 8.0 angefordert; Fallback fuellt die WebView.
+Canvas passt sich dem Seitenverhaeltnis an; Notch-/Telegram-Sicherheitsabstaende fuer
+Bedienelemente beruecksichtigt. Browser-QA in 390x844 und 844x390 erfolgreich, kein
+Scrollbereich im Spiel, Rueckkehr zur Lobby geprueft. Frontend ohne Dienstneustart ausgerollt.
+
+Korrektur Lobby und Handy-Steuerung:
+- Spielvorschau und grosses Intro aus Lobby entfernt, Startaktionen direkt oben.
+- Raum-Startknopf vor Raumcode und Spielerliste, lange Spielerliste begrenzt.
+- Quadratisches 30x30-Canvas statt gestreckter Rasterzellen: gleiche sichtbare
+  Schrittweite horizontal/vertikal. HUD und groessere Richtungstasten ausserhalb
+  des Spielfeldes, Querformat mit Tasten seitlich. Kein Scrollen in der Spielansicht.
+- Dekorative Vorschau wird auch nicht mehr gerendert.
+27 Tests bestanden. Browser-QA 390x844/844x390, Start/Rueckkehr und Canvasmasse
+geprueft. Frontend live per HTTPS mit lokalen Dateien hashgleich bestaetigt;
+Dienst blieb aktiv. Echtes Telegram-Handy weiterhin vom Benutzer zu pruefen.
+Rollback: /root/snake-before-compact-lobby-20261028.tar.gz

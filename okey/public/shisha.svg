@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 180" fill="none">
+  <title>Türkise Shisha mit goldenem Hals und Schlauch</title>
+  <ellipse cx="57" cy="169" rx="39" ry="7" fill="#0b211f" fill-opacity=".3"/>
+  <path d="M46 104c0 17-19 23-20 39-1 15 12 23 31 23s32-8 31-23c-1-16-20-22-20-39" fill="#4d9e9a" stroke="#234e4c" stroke-width="4"/>
+  <path d="M34 143c14 5 32 5 47 0v6c-10 13-38 14-47 0Z" fill="#235e63"/>
+  <path d="M41 127c-6 8-9 15-7 22m7-24 2-3" stroke="#a5e1cd" stroke-width="4" stroke-linecap="round"/>
+  <path d="M48 105h18l3 7H45l3-7Z" fill="#cb9e53" stroke="#6d512b" stroke-width="3"/>
+  <path d="M52 37h10v65H52z" fill="#d4ad64" stroke="#725632" stroke-width="3"/>
+  <path d="m48 66 9-6 10 6-10 8-9-8Zm0 22 9-6 10 6-10 8-9-8Z" fill="#f1d28a" stroke="#725632" stroke-width="3"/>
+  <path d="M67 91c17-1 30 14 29 33-1 18 11 22 20 15 10-9 7-31 3-47" stroke="#102d31" stroke-width="10" stroke-linecap="round"/>
+  <path d="M67 91c17-1 30 14 29 33-1 18 11 22 20 15 10-9 7-31 3-47" stroke="#b68546" stroke-width="5" stroke-linecap="round"/>
+  <path d="m114 73 7 23" stroke="#ebce83" stroke-width="8" stroke-linecap="round"/>
+  <path d="M33 38h49l-5 7H38l-5-7Z" fill="#c89c51" stroke="#725632" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M44 16h27l-6 15H50l-6-15Z" fill="#b16d48" stroke="#64432d" stroke-width="3"/>
+  <ellipse cx="57" cy="16" rx="14" ry="4" fill="#4e3931" stroke="#725632" stroke-width="2"/>
+  <path d="m48 14 4-4 5 3-2 4m6-4 4-3 4 4-4 3" fill="#e38a56"/>
+  <path d="M56 5c-6-5 5-7 2-12" stroke="#d8ded1" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/>
+</svg>

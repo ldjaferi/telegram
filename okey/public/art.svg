@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Stylized adult breast: a playful game symbol, with no realistic anatomy. -->
+  <path d="M22 23c-1 14-9 22-9 37 0 16 12 27 27 26 8 0 13-3 16-8 10 4 23 0 29-9 9-14 2-29-11-34-8-3-14-8-17-16" fill="#f4bc9f" stroke="#643c32" stroke-width="5" stroke-linecap="round"/>
+  <path d="M56 44c7 12 6 24 0 34" fill="none" stroke="#643c32" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="33" cy="64" rx="7" ry="6" fill="#d57b7b"/><circle cx="33" cy="64" r="2.6" fill="#9a5059"/>
+  <ellipse cx="73" cy="57" rx="6" ry="5.5" fill="#d57b7b"/><circle cx="73" cy="57" r="2.4" fill="#9a5059"/>
+  <path d="m13 23-6-6m73 4 5-7M9 40H3m85-5 8-2" stroke="#dca65f" stroke-width="3" stroke-linecap="round"/>
+</svg>

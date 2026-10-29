@@ -1,0 +1,47 @@
+[Unit]
+Description=Okey Mini App
+After=network.target
+
+[Service]
+Type=simple
+User=okey
+Group=okey
+WorkingDirectory=/opt/okey
+EnvironmentFile=/etc/okey/config
+LoadCredential=bot-token:/etc/okey/bot-token
+ExecStart=/opt/node24/bin/node /opt/okey/src/main.js
+StateDirectory=okey
+StateDirectoryMode=0750
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/okey
+LimitCORE=0
+LimitNOFILE=4096
+TasksMax=64
+MemoryHigh=256M
+MemoryMax=384M
+MemorySwapMax=0
+CPUQuota=60%
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+goyim.xhaferi.al {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        -Server
+    }
+    request_body {
+        max_size 16KB
+    }
+    reverse_proxy 127.0.0.1:3100
+    # Do not enable access logging with raw socket-ticket query strings.
+}

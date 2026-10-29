@@ -1,0 +1,15 @@
+# Local SSH credentials and application secrets
+*.pem
+.env
+.env.*
+!.env.example
+node_modules/
+data/
+artifacts/
+*.sqlite*
+*.log
+*.tar.gz
+
+# Local chat attachments and packaged releases
+.codex-attachments/
+*.zip

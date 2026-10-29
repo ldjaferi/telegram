@@ -1,0 +1,84 @@
+# OKEY — aber frech.
+
+Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das bestehende Snake-Spiel; verwendet einen eigenen Prozess auf Port 3200. Keine Änderungen am Snake-Dienst notwendig.
+
+**Live seit 28.10.2026:** [@GoyimGjurzi_bot](https://t.me/GoyimGjurzi_bot) · [Weboberfläche](https://goyim.xhaferi.al/okey/). Im privaten Bot-Chat `/start` oder `/nisja` senden und „Okey spielen“ antippen. Die Telegram-Anmeldung benötigt den Start über den Bot. `/play` bleibt als zusätzlicher Befehl kompatibel; im Befehlsmenü steht `/nisja`.
+
+## Enthalten
+
+- Holzbretter und elfenbeinfarbene Steine, Filztisch, leichte räumliche Tiefe durch CSS. Kein WebGL und keine schwere 3D-Engine.
+- Die zwei Steine mit Comic-Brustmotiv sind dauerhaft Joker. Kein Anzeiger, keine Ersatzsteine; alle 104 Zahlensteine behalten ihren Wert. 106 Steine insgesamt, nach dem Austeilen 49 im Vorrat.
+- Letzter Abwurf je Spieler sichtbar; aufgenommene Abwürfe bleiben als historische Anzeige mit ↗ markiert. Die Mitte zeigt den eigenen Abwurf und separat den aktuell aufnehmbaren Stein.
+- Solo gegen drei Computer, private Tische für bis zu vier Menschen, Computer auf freien Plätzen beim Start. Der Gastgeber startet die Runde und die Revanche.
+- Server entscheidet über Ziehen, Abwerfen und Gewinn; jeder Client erhält nur seine eigene Hand. Vollständige Partition in Reihen/Gruppen sowie sieben identische Paare, 12–13–1 erlaubt, 13–1–2 verboten.
+- Steine auf zwei Leisten frei ordnen: direkt mit Finger/Maus ziehen, per Antippen platzieren oder mit Pfeiltasten verschieben. Keine Überdeckung; andere Steine machen Platz. Passende Reihen, Farbgruppen und Paare rasten magnetisch zusammen und werden grün markiert. Ganze Kombinationen gemeinsam ziehen; einzelne Steine erst antippen, dann herausziehen. Lücken, Gruppen und Positionen bleiben pro Tisch/Runde erhalten, auch beim Formatwechsel. Sortieren ordnet das Brett neu.
+- Die Gewinnhand zeigt die tatsächlich passenden Reihen, Gruppen oder sieben Paare getrennt; echte Joker sind mit ihrem ersetzten Wert beschriftet.
+- Bildschirmfüllende Handyansicht: Querformat mit Tisch und Brett nebeneinander, Hochformat untereinander. Gesten, Bluff, Shisha und Brettwerfen stehen direkt als Symbolleiste auf dem Tisch. Mehr enthält zusätzliche Hinweise und Tisch verlassen.
+- Stinkefinger, lange Nase, Furz und Çay als animierte Tischreaktionen. Avatar auswählen für gezielte Gesten. 2,5 Sekunden Abklingzeit.
+- **Joker-Bluff:** Eigene Schaltfläche direkt auf dem Tisch. Nur mit einem aktuell gehaltenen Joker und während einer laufenden Runde; auch ausserhalb des eigenen Zugs. Alle sehen eine leicht behaarte, wackelnde Comic-Männerbrust mit „Ich hab einen Joker!“. Der Server prüft den Besitz eines festen Jokers. Keine Offenlegung der übrigen Hand und kein Verbrauch des Jokers. Acht Sekunden Pause zwischen Bluffs, reduzierte Bewegung wird berücksichtigt.
+- **Shishas:** Zwei gezeichnete Shishas auf dem Tisch. Alle 18–30 Sekunden nimmt ein zufälliger aktiver Spieler einen kleinen Zug (erster Zug nach 14–24 Sekunden); Pose und kleine Rauchwolken sind für alle sichtbar. „Fester Zug“ vernebelt die gesamte Spielansicht für drei Sekunden, danach löst sich der Rauch auf. Ein grosser Zug alle 15 Sekunden pro Tisch, damit niemand dauerhaft die Sicht blockiert. Rein optischer Effekt: Steine, Zugreihenfolge und Zugzeit bleiben unverändert. Bei reduzierter Bewegung nur ein ruhiger, leichter Schleier; kurzes Wasserblubbern bei kleinen Zügen und kräftigeres, knapp zwei Sekunden langes Blubbern beim festen Zug. Der Ton-Schalter stoppt das Blubbern sofort. Veraltete Ereignisse und verborgene Fenster spielen keinen nachträglichen Zug-Sound ab.
+- Brettwerfen bedeutet Aufgabe dieser Runde, mit sichtbarem Ereignis für alle. Aufgebende bleiben als Zuschauer und dürfen weiter gestikulieren. Die übrigen Spieler spielen weiter; letzter verbliebener Spieler gewinnt.
+- Eigene leise Hijaz-inspirierte Hintergrundmusik aus Zupftönen und sanften Trommelimpulsen, ohne Audiodownload. Beginnt nach der ersten Berührung während des Spiels, pausiert bei verborgenem Fenster oder Rundenende. ♫ schaltet Musik und Effekte gemeinsam aus; die Einstellung bleibt gespeichert. Reduzierte Animationen bei entsprechender Systemeinstellung.
+- 120 Sekunden pro Zug (Ziehen und Abwerfen zusammen), danach automatische Aktion. Wiederverbindung über dieselbe Sitzung; Telegram-Identitäten finden ihren Tisch auch nach neuer Anmeldung wieder.
+
+## Lokal spielen
+
+Node.js 24 und pnpm 11:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm test
+pnpm start
+```
+
+Alternativ `npm install`, `npm test`, `npm start`. Es gibt keinen Build-Schritt. Öffne `http://127.0.0.1:3200/`. Lokale Anmeldung ist nur bei Loopback-Bindung ausserhalb von Production möglich. Für mehrere Testspieler getrennte Tabs öffnen; mit `/?name=Ali` bzw. `/?name=Leyla` einen lokalen Namen festlegen. Über „Mit Freunden“ einen Tisch erstellen und den sechsstelligen Tischcode teilen.
+
+## Eigenen Server und Telegram verbinden
+
+1. Das vollständige Verzeichnis `okey/` nach `/opt/okey` kopieren und dort `pnpm install --prod --frozen-lockfile` ausführen. Node 24 vorausgesetzt.
+2. Eine HTTPS-Adresse über den bestehenden Reverse Proxy auf `127.0.0.1:3200` zeigen lassen. `PUBLIC_URL` darf einen Unterpfad enthalten. Aktuell läuft Okey unter `https://goyim.xhaferi.al/okey`; der Proxy leitet `/okey` und `/okey/*` ohne Entfernen des Präfixes weiter. Caddy übernimmt WebSocket-Upgrades automatisch.
+3. `.env.example` als `/etc/okey/config` speichern. `PUBLIC_URL`, `BOT_USERNAME` (ohne @) und `ALLOWED_TELEGRAM_IDS` setzen. Standardmässig sind nur eingetragene Telegram-IDs zugelassen. `ALLOW_PUBLIC_PLAY=true` erlaubt bewusst alle Telegram-Konten.
+4. Den neuen Bot-Token ausschliesslich auf dem Server in `/etc/okey/bot-token` speichern (root, 0600). `deploy/okey.service` verwendet systemd `LoadCredential`. Der Token wird für die Prüfung der Telegram-Anmeldung gebraucht, nicht an Browser ausgegeben.
+5. Der Dienst setzt Menüknopf, Beschreibung und `/nisja`, `/help`, `/id` automatisch. `/start` und private Spielknöpfe öffnen die Mini App. Einladungen verwenden `https://t.me/BOT_USERNAME?start=room_ABCDEF`; eine Main-Mini-App-Konfiguration in BotFather ist dafür nicht nötig. Sie bleibt optional für einen zusätzlichen Startknopf im Bot-Profil.
+6. Den Dienst nach Prüfung der Pfade installieren und starten. `/healthz` liefert den Status. Danach mit echten Telegram-Konten auf iOS und Android testen.
+
+Aktuelle Aufteilung im vorhandenen Caddy-Site-Block:
+
+```caddy
+goyim.xhaferi.al {
+    @okey path /okey /okey/*
+    handle @okey {
+        reverse_proxy 127.0.0.1:3200
+    }
+    handle {
+        reverse_proxy 127.0.0.1:3100
+    }
+}
+```
+
+Der systemd-Dienst verwendet den separaten Systembenutzer `okey` und die vorhandene Node-Runtime `/opt/node24/bin/node`. Code liegt root-eigen unter `/opt/okey`, der Polling-Stand unter `/var/lib/okey/bot-offset`. Token und Konfiguration liegen root-eigen mit 0600 in `/etc/okey` (0700). Die bestehende Egress-Firewall gilt auch für Okey. Port 3200 bleibt ausschliesslich an Loopback gebunden.
+
+`deploy/install-app.sh` ist auf diesen VPS zugeschnitten: Installation, Tests, Konfiguration, Caddy-Routing und systemd. Vor Änderungen erstellt es Rückfallkopien; ein erneuter Lauf startet Okey neu und beendet damit laufende Okey-Runden. Die Datei enthält keine Zugangsdaten. Bestehende Snake-Konfiguration bleibt erhalten.
+
+## Stand und Grenzen
+
+Dies ist eine spielbare erste Version. Gezählt werden Rundensiege, **nicht** die traditionelle Strafpunktwertung; Partnerspiel fehlt; ein Anzeiger ist in dieser Variante nicht vorgesehen. Die Regeln zum Brettwerfen, Zuglimit und letzten verbliebenen Spieler sind bewusste Hausregeln.
+
+Computer verwenden eine einfache Kombinationen-Heuristik ohne Einsicht in andere Hände. Sie prüfen Gewinnhände exakt, spielen aber nicht auf Expertenniveau. Die Gesten verwenden System-Emoji plus Animationen; das Joker-Motiv ist ein eigenes SVG.
+
+Tische, Sitzungen und Siege leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zwei Stunden. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
+
+Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Bluff, die Sperre nach einem Joker-Abwurf sowie Shishas und das Auflösen des Rauchs ab. 18 Tests bestehen lokal; vor der Bereitstellung werden sie zusätzlich auf dem VPS ausgeführt. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden geprüft. Echte Telegram-Geräte, Audio-Wiedergabe und Touch-Bedienung auf iOS/Android sind noch zu prüfen.
+
+## Tests und Dateien
+
+`pnpm test` prüft Regeln, Joker, sieben Paare, unzulässige Gewinne, verdeckte Hände, Aufgeben, Turn-Reihenfolge, automatische Partien, zwei echte WebSocket-Clients, gezielte Gesten, Wiederverbindung und Anmeldeschranken. `pnpm check` prüft die JavaScript-Syntax.
+
+- `src/game.js`: Regel-Engine, Computer, Tische, persönliche Snapshots.
+- `src/server.js`: HTTP, Telegram-Login, einmalige Socket-Tickets, WebSocket-Nachrichten.
+- `src/auth.js`: Übernommene Telegram-HMAC-Prüfung und Sitzungen aus dem bestehenden Projekt.
+- `src/bot.js`: Bot-Kommandos, Einladungen, Menü und Long Polling mit gespeichertem Update-Stand.
+- `public/`: HTML, CSS, JavaScript und SVG, keine externen UI-Abhängigkeiten.
+- `deploy/okey.service`: Separate systemd-Vorlage.
+
+Grundlage mit ausdrücklich angepasster fester Joker-Regel: [Pagat – klassisches Okey](https://www.pagat.com/rummy/okey.html). Telegram: [Mini Apps](https://core.telegram.org/bots/webapps).

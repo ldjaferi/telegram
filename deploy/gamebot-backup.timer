@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Snake Club backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Europe/Zurich
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

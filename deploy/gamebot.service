@@ -1,0 +1,26 @@
+[Unit]
+Description=Snake Club Telegram multiplayer game
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=gamebot
+Group=gamebot
+WorkingDirectory=/opt/gamebot
+EnvironmentFile=/etc/gamebot/config
+LoadCredential=bot-token:/etc/gamebot/bot-token
+ExecStart=/opt/node24/bin/node /opt/gamebot/src/main.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=150
+KillSignal=SIGTERM
+StateDirectory=gamebot
+StateDirectoryMode=0750
+UMask=0077
+# Existing /etc/systemd/system/gamebot.service.d/hardening.conf remains authoritative.
+
+[Install]
+WantedBy=multi-user.target

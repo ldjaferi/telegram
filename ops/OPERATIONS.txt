@@ -1,0 +1,88 @@
+Game-Bot VPS: Betriebsnotizen
+Stand: 28.10.2026
+
+Server: 91.214.190.222 / ov-c992dc
+Debian: 13.7; laufender Kernel nach Neustart: 6.12.113+deb13-amd64
+Direkter Betrieb mit systemd, keine Containertechnik installiert.
+
+SSH von 31.10.147.51:
+ssh -p 1986 -i "C:\Users\lav\Documents\ChatGPT\Telegramm\vps.pem" -o HostKeyAlias=91.214.190.222 debian@91.214.190.222
+Die private Datei vps.pem bleibt lokal und darf nicht ins Repository.
+
+Zugriff:
+- Nur IPv4-Port 1986, nur Benutzer debian, nur Schluesselanmeldung.
+- Root-Anmeldung, Passwoerter, Tunnels und Weiterleitungen gesperrt.
+- Quellenbeschraenkung in Infomaniak-Firewall, nftables und SSH-AllowUsers.
+- Bei IP-Wechsel ALLE drei Stellen aktualisieren, solange der alte Zugang funktioniert.
+- Falls bereits ausgesperrt: Infomaniak-Recovery/Rescue verwenden.
+- VNC allein garantiert keinen Login, da kein Konsolenpasswort eingerichtet wurde.
+- Der administrative debian-Benutzer behaelt sudo; der Bot erhaelt kein sudo.
+
+Wichtige Dateien auf dem Server:
+/etc/ssh/sshd_config.d/00-gamebot-hardening.conf
+/etc/ssh/sshd_config.d/20-telegram-ssh-port.conf
+/etc/nftables.conf
+/etc/sysctl.d/60-gamebot-hardening.conf
+/etc/apt/apt.conf.d/52gamebot-unattended-upgrades
+/etc/systemd/resolved.conf.d/60-gamebot-hardening.conf
+/etc/systemd/journald.conf.d/60-gamebot-hardening.conf
+/etc/systemd/coredump.conf.d/60-gamebot-hardening.conf
+/etc/systemd/system/gamebot.service.d/hardening.conf
+/etc/systemd/system-generators/systemd-ssh-generator -> /dev/null
+
+Firewall:
+- Eingehend standardmaessig blockiert; SSH nur von der erlaubten IP.
+- Loopback, Antworten, DHCP und ICMP/IPv6-Nachbarschaft bleiben erlaubt.
+- Weiterleitung blockiert. HTTP/HTTPS eingehend noch NICHT freigegeben.
+- gamebot darf ausgehend den lokalen DNS-Resolver und oeffentliches TCP/443 nutzen.
+- Private Netze, Cloud-Metadaten und der bisherige VPS 83.228.205.38 sind fuer gamebot gesperrt.
+- Dies ist eine HTTPS-Freigabe, keine exklusive Telegram-Domain-Allowlist.
+- Administrative Systemprozesse behalten ausgehenden Netzwerkzugang fuer Updates etc.
+
+Vorbereiteter Bot-Betrieb (noch keine Anwendung / kein gamebot.service-Hauptteil):
+- gamebot: gesperrtes Systemkonto, nologin, keine administrativen Gruppen.
+- /opt/gamebot: Code, root:root, vom Bot nicht schreibbar.
+- /var/lib/gamebot: Daten / SQLite, gamebot:gamebot, Modus 0750.
+- /etc/gamebot: root:root, Modus 0700, fuer spaetere Secret-Verwaltung.
+- Bot-Token spaeter mittels systemd LoadCredential zufuehren; niemals im Quellcode.
+- Drop-in greift fuer den spaeteren Dienstnamen gamebot.service.
+- NoNewPrivileges, leere Capabilities, System schreibgeschuetzt, Home-Verzeichnisse verborgen.
+- Private temporaere Dateien/Geraete und Schutz von Kernel-/Systemeinstellungen.
+- CPUQuota 80%, MemoryHigh 512M, MemoryMax 768M, TasksMax 64.
+- CPUQuota bezieht sich auf einen CPU-Kern. Die Grenzen bei Lasttests pruefen.
+- Keine Datentraegerquote fuer SQLite; freien Platz und Datenwachstum bei Deployment planen.
+- Journald maximal 128 MB persistent, Aufbewahrung maximal 30 Tage.
+- AppArmor ist aktiv; fuer die noch nicht existierende Anwendung gibt es kein eigenes Profil.
+
+Updates:
+- Alle zum Einrichtungszeitpunkt verfuegbaren Paketupdates installiert.
+- Sicherheitsupdates laufen automatisch taeglich; keine automatischen Neustarts.
+- Erforderliche Kernel-Neustarts und regulaere Updates weiterhin administrativ einplanen.
+- Der urspruengliche Cloud-init-Fehler betraf eine nicht vorhandene zweite Datenplatte.
+  Das Vendor-Skript wurde nicht erneut ausgefuehrt oder geaendert.
+  Nach Neustart: cloud-init status done, keine Fehler, keine fehlgeschlagenen Dienste.
+
+Geprueft:
+- Neue SSH-Anmeldung nach Haertung UND Neustart erfolgreich.
+- Root-SSH verweigert. Nur TCP/1986 extern lauschend; DNS nur Loopback.
+- nftables, SSH und AppArmor aktiv und fuer Systemstart aktiviert.
+- Automatische Sicherheitsupdates: Dry-run erfolgreich; dpkg --audit ohne Befund.
+- Isolationspruefung mit EXAKTEM gamebot-Drop-in vor/nach Neustart erfolgreich:
+  Nicht-root, NoNewPrivileges, keine Capabilities, kein Lesen von /etc/shadow oder SSH-Dateien,
+  Code/System schreibgeschuetzt, Datenverzeichnis beschreibbar, Telegram HTTPS erreichbar,
+  Metadaten/bisheriger VPS/lokaler SSH-Port explizit abgewiesen (nftables-Zaehler bestaetigt).
+
+Wiederholung der Dienstpruefung (ueber sudo, siehe check-gamebot-isolation.sh):
+mkdir -p /run/systemd/system/gamebot-security-check.service.d
+cp /etc/systemd/system/gamebot.service.d/hardening.conf /run/systemd/system/gamebot-security-check.service.d/hardening.conf
+systemctl daemon-reload
+systemd-run --unit=gamebot-security-check --wait --pipe /bin/bash /usr/local/libexec/gamebot-security-check.sh
+
+Rueckfallkopie der vorherigen SSH/Firewall-Einstellungen: /root/gamebot-hardening-before
+Der automatische Rueckfalltimer wurde nach erfolgreicher SSH-Pruefung gestoppt.
+harden-system.sh ist ein einmaliges Einrichtungsprotokoll, kein beliebig wiederholbares Skript.
+
+Noch vor dem Spielbetrieb erforderlich:
+Spiel/Bot entwickeln, systemd-Hauptdienst anlegen, Token sicher hinterlegen, Domain/HTTPS,
+gezielte Freigabe der Webports in BEIDEN Firewalls, Telegram-Zulassungsliste und externe
+Datensicherung einschliesslich Wiederherstellungstest. Noch keine Backups eingerichtet.

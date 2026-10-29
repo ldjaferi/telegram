@@ -1,0 +1,344 @@
+import { winningGroups } from './melds.js';
+import { TableMusic, shishaBubbles } from './music.js';
+import { FreeRack } from './rack.js';
+const $ = s => document.querySelector(s);
+const appBase = new URL('.', document.baseURI);
+const apiUrl = path => new URL(path.replace(/^\//, ''), appBase);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const colors = ['Rot', 'Gelb', 'Blau', 'Schwarz'];
+// The code gives every guest the same name, including after reconnects.
+const tableNames = ['Te Ramizi', 'Te Fadili', 'Te Agroni', 'Te Iliri', 'Te Arbëni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ahmedi', 'Te Omari', 'Te Hasani', 'Te Khalidi', 'Te Jusufi', 'Te Karimi', 'Te Samiri', 'Te Tariku'];
+const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
+const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
+const gestureArt = { finger: '🖕', nose: '👃👋', fart: '💨', tea: '☕' };
+const gestureCopy = { finger: 'sendet liebe Grüsse', nose: 'macht eine lange Nase', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
+let room = null, user = null, socket = null, config = null, selected = null, order = [], target = null, lastEvent = 0, roomCode = null, connected = false, reconnectTimer, toastTimer, eventTimer, serverOffset = 0;
+let muted = localStorage.getItem('okey-muted') === 'true', audio, music;
+let audioUnlocked = false, suppressClickUntil = 0;
+const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); } });
+for(const button of [...document.querySelectorAll('.gestures button'), $('#bluff'), $('#shisha'), $('#throw')]) $('#table-actions').append(button);
+$('#bluff').setAttribute('aria-label','Joker-Bluff'); $('#shisha').setAttribute('aria-label','Fester Zug'); $('#throw').setAttribute('aria-label','Brett werfen und Runde aufgeben');
+let token = sessionStorage.getItem('okey-token') || '';
+let smokeTimer, stopBubbles;
+const telegram = window.Telegram?.WebApp;
+telegram?.ready(); telegram?.expand();
+function fitViewport() {
+  document.documentElement.style.setProperty('--app-height', Math.floor(Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight)) + 'px');
+}
+window.addEventListener('resize', fitViewport);
+window.visualViewport?.addEventListener('resize', fitViewport);
+fitViewport();
+$('#tools-button').onclick = () => { $('#tools-content').append($('#table-tools')); $('#tools-dialog').showModal(); };
+$('#close-tools').onclick = () => $('#tools-dialog').close();
+$('#tools-dialog').addEventListener('close', () => { document.querySelector('main').append($('#table-tools')); $('#tools-button').focus(); });
+const portraitScreen = matchMedia('(orientation: portrait)');
+const smallScreen = matchMedia('(max-width: 900px)');
+const touchScreen = matchMedia('(pointer: coarse)');
+let rotateHintDismissed = sessionStorage.getItem('okey-rotate-dismissed') === 'true';
+function updateRotateHint() {
+  const mobile = touchScreen.matches || ['android', 'ios'].includes(telegram?.platform);
+  $('#rotate-hint').hidden = rotateHintDismissed || !mobile || !smallScreen.matches || !portraitScreen.matches;
+}
+for (const query of [portraitScreen, smallScreen, touchScreen]) query.addEventListener('change', updateRotateHint);
+$('#dismiss-rotate').onclick = () => { rotateHintDismissed = true; sessionStorage.setItem('okey-rotate-dismissed', 'true'); updateRotateHint(); };
+updateRotateHint();
+
+const demoHand = [
+  {id:'demo-joker',joker:true}, ...[3, 4, 6].map(number => ({ id: `d0-${number}`, color: 0, number })),
+  ...[7, 8, 9].map(number => ({ id: `d2-${number}`, color: 2, number })),
+  { id: 'd1-11', color: 1, number: 11 },
+  ...[0, 1, 2, 3].map(color => ({ id: `d-${color}-10`, color, number: 10 })),
+  ...[1, 2, 3].map(number => ({ id: `d3-${number}`, color: 3, number }))
+];
+const me = () => room?.players.find(p => p.id === user?.id);
+const myTurn = () => connected && room?.status === 'playing' && !me()?.out && room.players[room.turn]?.id === user?.id;
+function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 3800); }
+function modal(html) { $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
+$('#close-modal').onclick = () => $('#modal').close();
+$('#modal').addEventListener('click', e => { if (e.target === $('#modal')) { const r = $('#modal').getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $('#modal').close(); } });
+
+function syncMusic(){
+  if(!audioUnlocked||!audio)return;
+  music ||= new TableMusic(audio);
+  if(!muted && room?.status==='playing' && !document.hidden)music.start();else music.stop();
+}
+function unlockAudio(){
+  if(muted || (audioUnlocked && audio?.state === 'running'))return;
+  try{audio ||= new (window.AudioContext || window.webkitAudioContext)();audio.resume().then(()=>{audioUnlocked=true;syncMusic()}).catch(()=>{});}catch{}
+}
+document.addEventListener('pointerdown',unlockAudio,{passive:true});
+document.addEventListener('keydown',unlockAudio);
+document.addEventListener('visibilitychange',()=>{syncMusic();if(document.hidden)stopBubbles?.()});
+function sound(kind = 'tile') {
+  if (muted || document.hidden) return;
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume();
+    if (kind === 'shisha' || kind === 'puff') { stopBubbles?.(); stopBubbles=shishaBubbles(audio,kind==='shisha'); return; }
+    const t = audio.currentTime, gain = audio.createGain(); gain.connect(audio.destination);
+    if (kind === 'fart' || kind === 'throw') {
+      const seconds = kind === 'fart' ? .65 : .3;
+      const buffer = audio.createBuffer(1, audio.sampleRate * seconds, audio.sampleRate), data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (kind === 'fart' ? (.5 + .5 * Math.sin(i / audio.sampleRate * 210)) : 1);
+      const source = audio.createBufferSource(), filter = audio.createBiquadFilter(); source.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = kind === 'fart' ? 260 : 1700; source.connect(filter); filter.connect(gain);
+      gain.gain.setValueAtTime(.2, t); gain.gain.exponentialRampToValueAtTime(.001, t + seconds); source.start(t);
+    } else {
+      const oscillator = audio.createOscillator(); oscillator.type = kind === 'tile' ? 'triangle' : 'sine'; oscillator.frequency.setValueAtTime(kind === 'tile' ? 800 : 520, t); oscillator.frequency.exponentialRampToValueAtTime(180, t + .13); oscillator.connect(gain); gain.gain.setValueAtTime(.12, t); gain.gain.exponentialRampToValueAtTime(.001, t + .15); oscillator.start(t); oscillator.stop(t + .16);
+    }
+  } catch { /* Muted devices can still play the game. */ }
+}
+function updateSound() { $('#sound').innerHTML = muted ? '♫<span class="sound-slash">/</span>' : '♫'; $('#sound').title = muted ? 'Musik und Ton einschalten' : 'Musik und Ton ausschalten'; $('#sound').setAttribute('aria-label', $('#sound').title); }
+$('#sound').onclick = () => { muted = !muted; localStorage.setItem('okey-muted', String(muted)); updateSound(); if(muted)stopBubbles?.(); else unlockAudio(); syncMusic(); sound(); }; updateSound();
+
+function tileMarkup(tile, interactive = false) {
+  const wild = tile.joker === true, v = tile;
+  const label = wild ? 'Joker, frei einsetzbar' : `${colors[v.color]} ${v.number}`;
+  return `<${interactive ? 'button' : 'span'} class="tile c${wild ? 0 : v.color}${wild ? ' joker' : ''}${tile.id === selected ? ' selected' : ''}" ${interactive ? `data-tile="${esc(tile.id)}" draggable="false" aria-pressed="${tile.id === selected}"` : ''} title="${esc(label)}" aria-label="${esc(label)}">${wild ? '<img src="art.svg" alt="Comic-Brust als Joker"><span class="tile-tag">JOKER</span>' : `<span class="number">${v.number}</span><span class="pip">${['◆', '●', '▲', '♠'][v.color]}</span>`}</${interactive ? 'button' : 'span'}>`;
+}
+function send(type, data = {}) {
+  if (socket?.readyState !== WebSocket.OPEN) return toast('Die Verbindung wird gerade wiederhergestellt.');
+  socket.send(JSON.stringify({ type, ...data }));
+}
+async function post(path, data = {}) {
+  const response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) });
+  const result = await response.json(); if (!response.ok) { const error = Error(result.error); error.status = response.status; throw error; } return result;
+}
+async function connect() {
+  clearTimeout(reconnectTimer);
+  try {
+    config ||= await (await fetch(apiUrl('/api/config'))).json();
+    if (!token) {
+      if (!config.dev && !telegram?.initData) throw Error('Öffne dieses Spiel über den Telegram-Bot.');
+      const login = await post('/api/login', { initData: telegram?.initData || '', name: new URLSearchParams(location.search).get('name') || 'Gast' });
+      token = login.token; user = login.user; sessionStorage.setItem('okey-token', token);
+    }
+    const ticket = await post('/api/ticket'); user = ticket.user;
+    const socketUrl = new URL('socket', appBase); socketUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'; socketUrl.searchParams.set('ticket', ticket.ticket);
+    socket = new WebSocket(socketUrl);
+    socket.onmessage = e => {
+      const message = JSON.parse(e.data);
+      if (message.type === 'error') return toast(message.message);
+      if (message.type === 'ready') { connected = true; user = message.user; $('#connection').textContent = config.dev ? 'LOKAL AM TISCH' : 'AM TISCH'; }
+      if (message.type === 'ready' || message.type === 'state') {
+        const next = message.room;
+        if (next?.code !== roomCode) { roomCode = next?.code; lastEvent = next?.events.at(-1)?.seq || 0; order = []; selected = null; target = null; clearSmoke(); $('#ambient-smoke').replaceChildren(); }
+        if (next?.round !== room?.round) { order = []; selected = null; $('#rack').classList.remove('thrown'); }
+        room = next;
+        if (room) serverOffset = room.serverNow - Date.now();
+        render();
+        if (room) for (const event of room.events) if (event.seq > lastEvent) { lastEvent = event.seq; if (Date.now() + serverOffset - event.at < 4500) showEvent(event); }
+        if (message.type === 'ready' && !room) {
+          const start = telegram?.initDataUnsafe?.start_param || '';
+          const code = new URLSearchParams(location.search).get('room') || (/^room_([A-Fa-f0-9]{6})$/.exec(start)?.[1]);
+          if (code) send('join', { code });
+        }
+      }
+    };
+    socket.onclose = e => {
+      connected = false; $('#connection').textContent = 'VERBINDUNG WEG'; render();
+      if (e.code === 4001) { toast('Dieser Tisch ist in einem anderen Fenster geöffnet.'); return; }
+      reconnectTimer = setTimeout(connect, 1800);
+    };
+    socket.onerror = () => socket.close();
+  } catch (error) {
+    connected = false; $('#connection').textContent = 'NICHT VERBUNDEN';
+    if (error.status === 401 && token) { token = ''; sessionStorage.removeItem('okey-token'); reconnectTimer = setTimeout(connect, 500); }
+    else { toast(error.message); if (error instanceof TypeError) reconnectTimer = setTimeout(connect, 3000); }
+  }
+}
+
+function discardMarkup(index, owner='') {
+  const last=room?.lastDiscards?.[index];
+  return last ? `<span class="last-discard${last.taken?' taken':''}" title="${esc(owner)}: letzter Abwurf${last.taken?' (bereits genommen)':''}">${tileMarkup(last.tile)}${last.taken?'<small aria-label="Bereits genommen">↗</small>':''}</span>` : '<span class="no-discard" title="Noch kein Abwurf">–</span>';
+}
+function renderSeats() {
+  const mine = room?.players.findIndex(p => p.id === user?.id) ?? 0;
+  // Play runs counterclockwise: bottom -> right -> top -> left.
+  for (const [position, offset] of [['right', 1], ['top', 2], ['left', 3]]) {
+    const seatIndex = (Math.max(0, mine) + offset) % 4;
+    const p = room?.players[seatIndex] || (!room ? { name: ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'][offset - 1], bot: true, count: 14, preview: true } : null);
+    const seat = $(`#seat-${position}`);
+    seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
+    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)} als Ziel für Gesten wählen" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+  }
+}
+function renderCenter() {
+  if (!room) {
+    $('#center').innerHTML = '<p class="welcome-title">Na, traust du dich?</p><p class="welcome-sub">Der Çay ist heiss.<br>Deine Gegner auch ein bisschen.</p><div class="welcome-buttons"><button class="button primary" data-action="solo">Los, eine Runde! ↗</button><button class="button secondary" data-action="create">Mit Freunden</button></div><div class="center-links"><button class="text-button" data-action="join-dialog">Tischcode eingeben →</button></div>';
+    return;
+  }
+  if (room.status === 'lobby') {
+    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="start">Runde starten →</button>' : ''}</div>`;
+    return;
+  }
+  if (room.status === 'finished') {
+    const result = room.result;
+    $('#center').innerHTML = `<p class="result-title">${result.winner ? result.winner === user.id ? 'Okey, Champion!' : `${esc(result.name)} gewinnt!` : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Das letzte Brett am Tisch gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Unentschieden. Zeit für frischen Çay.' : result.joker ? 'Mit Joker abgeworfen. Respekt.' : 'Gute Hand. Grosse Klappe.'}</p><div class="welcome-buttons">${room.owner === user.id ? '<button class="button primary" data-action="start">Revanche! ↻</button>' : '<span class="welcome-sub">Warte auf die Revanche.</span>'}${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    return;
+  }
+  const mine=room.players.findIndex(p=>p.id===user.id);
+  const canDraw = myTurn() && room.phase === 'draw';
+  $('#center').innerHTML = `<div class="piles"><div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">o.</span></button><span>${room.stockCount} STEINE</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div></div><div class="joker-hint">Brustmotiv = <b>Joker</b> · immer frei einsetzbar</div>`;
+}
+function renderRack() {
+  const hand = room ? room.hand : demoHand;
+  order = order.filter(id => hand.some(t => t.id === id));
+  for (const tile of hand) if (!order.includes(tile.id)) order.push(tile.id);
+  if (!hand.some(t => t.id === selected)) selected = null;
+  const sorted = order.map(id => hand.find(t => t.id === id));
+  freeRack.context(`${room?.code || 'demo'}:${room?.round || 0}`);
+  freeRack.render(sorted, Boolean(room?.round));
+  if (room?.status !== 'playing' || !me()?.out) $('#rack').classList.remove('thrown');
+  $('#sort').disabled = !hand.length;
+  renderActions();
+}
+function renderActions() {
+  const canDiscard = myTurn() && room.phase === 'discard' && Boolean(selected);
+  $('#discard').disabled = !canDiscard; $('#claim').disabled = !canDiscard;
+  $('#throw').disabled = !connected || room?.status !== 'playing' || me()?.out;
+  $('#leave').hidden = !room;
+  $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Okey!“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
+  for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room;
+  renderBluff();
+  renderShisha();
+}
+function renderShisha() {
+  const seconds = Math.max(0, Math.ceil(((room?.shishaReadyAt || 0) - Date.now() - serverOffset) / 1000));
+  const active = connected && room?.status === 'playing' && !me()?.out;
+  $('#shisha').disabled = !active || seconds > 0;
+  const hint = !room || room.status !== 'playing' ? 'Drei Sekunden Rauch für den ganzen Tisch.' : me()?.out ? 'Du schaust zu. Die Shisha wartet auf die nächste Runde.' : seconds ? `Erst wieder klare Sicht … noch ${seconds}s.` : 'Einmal kräftig ziehen. Alle sitzen drei Sekunden im Nebel.';
+  $('#shisha-hint').textContent = hint; $('#shisha').title = hint;
+}
+function renderBluff() {
+  const seconds = Math.max(0, Math.ceil(((room?.bluffReadyAt || 0) - Date.now() - serverOffset) / 1000));
+  const eligible = connected && room?.canBluff;
+  $('#bluff').disabled = !eligible || seconds > 0;
+  const hint = !room || room.status !== 'playing' ? 'Mit Joker: eine Ansage an den ganzen Tisch.'
+    : me()?.out ? 'Du schaust zu. Bluffen geht erst wieder nächste Runde.'
+    : !room.canBluff ? 'Dafür brauchst du einen Joker auf deinem Brett.'
+    : seconds > 0 ? `Kurz durchatmen … noch ${seconds}s.` : 'Zeig allen: Ich habe einen Joker!';
+  $('#bluff-hint').textContent = hint; $('#bluff').title = hint;
+}
+function render() {
+  document.body.classList.toggle('in-game', Boolean(room));
+  document.body.dataset.stage = room?.status || 'welcome';
+  renderSeats(); renderCenter(); renderRack(); syncMusic();
+  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'}</div>` : 'OKEY · FESTE JOKER <span>•</span> 4 PLÄTZE';
+  $('#round-pill').textContent = !room ? 'DEIN LIEBLINGSTISCH IST FREI.' : room.status === 'lobby' ? room.owner === user.id ? 'FREIE PLÄTZE ÜBERNEHMEN COMPUTER.' : 'DER GASTGEBER STARTET DIE RUNDE.' : room.status === 'finished' ? 'DIE NÄCHSTE RUNDE WIRD PERSÖNLICH.' : me()?.out ? 'DU SCHAUST ZU. DIE ANDEREN SPIELEN WEITER.' : myTurn() ? room.phase === 'draw' ? 'DU BIST DRAN · ZIEH EINEN STEIN.' : 'DU BIST DRAN · WIRF EINEN STEIN AB.' : `${room.players[room.turn]?.name.toUpperCase()} IST DRAN.`;
+  $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}` : 'DEIN BRETT'}`;
+  $('#target-label').textContent = target && room?.players.some(p => p.id === target) ? `An ${room.players.find(p => p.id === target).name} · Avatar zum Abwählen` : 'An den ganzen Tisch';
+  renderClock();
+}
+function renderClock() {
+  renderBluff();
+  renderShisha();
+  if (room?.status === 'playing') {
+    const seconds = Math.max(0, Math.ceil((room.deadline - Date.now() - serverOffset) / 1000));
+    $('#turn-label').innerHTML = myTurn() ? `${room.phase === 'draw' ? 'Ziehen' : 'Abwerfen'} · <span class="timer">${seconds}s</span>` : me()?.out ? 'Brett weg. Trotzdem dabei.' : `${esc(room.players[room.turn]?.name)} · ${seconds}s`;
+  } else $('#turn-label').textContent = 'Ein bisschen Glück. Ein bisschen Frechheit.';
+}
+setInterval(renderClock, 500);
+
+function clearSmoke() { clearTimeout(smokeTimer); $('#smoke-screen').hidden = true; }
+function showPuff(event) {
+  if (!room || room.status !== 'playing' || document.hidden) return;
+  const mine = room.players.findIndex(p => p.id === user.id), actor = room.players.findIndex(p => p.id === event.player);
+  if (actor < 0 || mine < 0) return;
+  if (event.type === 'puff' && Date.now()+serverOffset-event.at < 650) sound('puff');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const seat = ['self', 'right', 'top', 'left'][(actor - mine + 4) % 4];
+  const puff = document.createElement('div'); puff.className = `small-puff puff-${seat}`;
+  puff.innerHTML = '<span class="puff-pipe">〰</span><img class="puff-hookah" src="shisha.svg" alt=""><i></i><i></i><i></i>';
+  $('#ambient-smoke').append(puff); setTimeout(() => puff.remove(), 2400);
+}
+function showSmoke(event) {
+  const age = Math.max(0, Date.now() + serverOffset - event.at), duration = event.duration || 3000;
+  if (age >= duration) return;
+  clearSmoke(); showPuff(event); if(age < 650) sound('shisha');
+  $('#smoke-who').textContent = `${event.name} ${event.name === 'Du' ? 'nimmst' : 'nimmt'} einen festen Zug.`;
+  $('#smoke-screen').hidden = false;
+  // Late packets join the same animation moment instead of adding extra smoke time.
+  for (const animation of $('#smoke-screen').getAnimations({ subtree: true })) animation.currentTime = age;
+  smokeTimer = setTimeout(clearSmoke, duration - age);
+}
+
+function showEvent(event) {
+  if (event.type === 'puff') { showPuff(event); return; }
+  if (event.type === 'smoke') { showSmoke(event); return; }
+  if (event.type === 'discard') { sound('tile'); return; }
+  if (event.type === 'start') { sound(); return; }
+  if (event.type === 'timeout') { toast(`${event.name}: Zeit um. Der Zug wurde automatisch gespielt.`); return; }
+  if (event.type === 'finish') { sound('win'); return; }
+  if (!['gesture', 'throw', 'bluff'].includes(event.type)) return;
+  if (event.player === user.id && !matchMedia('(max-width: 1000px), (max-height: 540px)').matches) $('#center').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  clearTimeout(eventTimer);
+  if (event.type === 'throw') {
+    sound('throw');
+    if (event.player === user.id) $('#rack').classList.add('thrown');
+    for (const seat of document.querySelectorAll('.seat')) if (seat.querySelector(`[data-target="${CSS.escape(event.player)}"]`)) seat.querySelector('.mini-rack')?.classList.add('thrown');
+    $('#table-event').innerHTML = `<div class="flying-board">${'<i></i>'.repeat(5)}</div><div class="event-card"><span class="event-emoji">🤬</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'wirfst' : 'wirft'} das Brett.<br>Runde aufgegeben. Würde auch.</span></div>`;
+  } else if (event.type === 'bluff') {
+    sound('gesture');
+    $('#table-event').innerHTML = `<div class="event-card joker-bluff"><span class="bluff-kicker">JOKER-BLUFF</span><span class="bluff-star left" aria-hidden="true">✦</span><img class="bluff-chest" src="bluff.svg" alt="Eine leicht behaarte Comic-Männerbrust wackelt"><span class="bluff-star right" aria-hidden="true">✦</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'zeigst' : 'zeigt'} Brust.</span><strong class="bluff-claim">„Ich hab einen Joker!“</strong></div>`;
+  } else {
+    sound(event.gesture === 'fart' ? 'fart' : 'gesture');
+    const recipient = event.target ? room.players.find(p => p.id === event.target)?.name : null;
+    const copy = event.name === 'Du' ? { finger: 'sendest liebe Grüsse', nose: 'machst eine lange Nase', fart: 'warst es ganz bestimmt nicht', tea: 'gibst einen Çay aus' }[event.gesture] : gestureCopy[event.gesture];
+    $('#table-event').innerHTML = `<div class="event-card ${event.gesture}"><span class="event-emoji">${gestureArt[event.gesture]}</span><span class="event-copy">${esc(event.name)} ${copy}${recipient ? `<br>Für ${esc(recipient)}.` : '.'}</span></div>`;
+  }
+  telegram?.HapticFeedback?.impactOccurred('light');
+  eventTimer = setTimeout(() => { $('#table-event').innerHTML = ''; }, event.type === 'bluff' ? 3800 : event.type === 'throw' ? 3300 : 2500);
+}
+
+
+function showWinningHand(){
+  const solved=winningGroups(room.revealed || []);
+  const labels={run:'Reihe',set:'Gruppe',pair:'Paar'};
+  const groups=solved?.groups.map((g,i)=>`<section class="winning-group"><h3>${labels[g.type]} ${i+1}</h3><div class="winning-tiles">${g.tiles.map(e=>`<div class="winning-tile">${tileMarkup(e.tile)}${e.wild?`<small>als ${colors[e.as.color]} ${e.as.number}</small>`:''}</div>`).join('')}</div></section>`).join('');
+  modal(`<h2>Die Gewinnerhand.</h2><p>${esc(room.result.name)} · ${solved?.kind==='pairs'?'Sieben identische Paare':'Reihen und Gruppen'}</p><div class="winning-groups">${groups || '<p>Diese Hand lässt sich nicht als Gewinnhand gruppieren.</p>'}</div>`);
+}
+
+async function invite() {
+  const link = config.botUsername ? `https://t.me/${config.botUsername}?start=room_${room.code}` : `${appBase.href}?room=${room.code}`;
+  try { await navigator.clipboard.writeText(link); toast(`${tableName(room.code)}: Einladung kopiert. Tischcode: ${room.code}`); }
+  catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
+}
+document.addEventListener('click', e => {
+  const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target }); return; }
+  const player = e.target.closest('[data-target]'); if (player?.dataset.target) { target = target === player.dataset.target ? null : player.dataset.target; render(); return; }
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'solo') send('create', { solo: true });
+  else if (action === 'create') send('create');
+  else if (action === 'start') send('start');
+  else if (action === 'draw-stock') send('draw', { source: 'stock' });
+  else if (action === 'draw-discard') send('draw', { source: 'discard' });
+  else if (action === 'invite') invite();
+  else if (action === 'join-dialog') {
+    modal('<p class="eyebrow">DEIN PLATZ WARTET SCHON</p><h2>Ab an den Tisch.</h2><form id="join-form"><label for="join-code">Tischcode von deinen Freunden</label><input id="join-code" name="code" placeholder="A1B2C3" maxlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off"><button class="button primary" type="submit">Dazusetzen →</button></form>');
+    $('#join-form').onsubmit = ev => { ev.preventDefault(); send('join', { code: $('#join-code').value.trim() }); $('#modal').close(); }; $('#join-code').focus();
+  } else if (action === 'reveal') showWinningHand();
+});
+$('#rack').addEventListener('click', e => { const tile = e.target.closest('[data-tile]'); if (!tile || Date.now() < suppressClickUntil) return; selected = selected === tile.dataset.tile ? null : tile.dataset.tile; renderRack(); });
+$('#discard').onclick = () => { send('discard', { tileId: selected }); };
+$('#claim').onclick = () => { send('discard', { tileId: selected, claim: true }); };
+$('#bluff').onclick = () => { send('bluff'); $('#tools-dialog').close(); };
+$('#shisha').onclick = () => { send('shisha'); $('#tools-dialog').close(); };
+$('#sort').onclick = () => {
+  const hand = room?.hand || demoHand;
+  order = [...hand].sort((a, b) => {
+    return Number(Boolean(a.joker))-Number(Boolean(b.joker)) || (a.color||0)-(b.color||0) || (a.number||0)-(b.number||0);
+  }).map(t => t.id); freeRack.reset(); renderRack();
+};
+$('#throw').onclick = () => {
+  modal('<p class="eyebrow">DAS IST EINE ANSAGE.</p><h2>Das Brett muss weg?</h2><p>Du gibst diese Runde auf. Alle sehen dein Brett fliegen und spielen weiter. Du bleibst zum Zuschauen und Gestikulieren am Tisch.</p><button id="confirm-throw" class="button primary">Ja. Brett fliegt! ↗</button><button id="keep-board" class="button secondary">Ich reiss mich zusammen</button>');
+  $('#confirm-throw').onclick = () => { send('surrender'); $('#modal').close(); };
+  $('#keep-board').onclick = () => $('#modal').close();
+};
+$('#leave').onclick = () => {
+  $('#tools-dialog').close();
+  if (room?.status !== 'playing' || me()?.out) { send('leave'); return; }
+  modal('<h2>Schon Feierabend?</h2><p>Beim Verlassen gibst du diese Runde auf. Die anderen spielen weiter.</p><button id="confirm-leave" class="button primary">Tisch verlassen</button>');
+  $('#confirm-leave').onclick = () => { send('leave'); $('#modal').close(); };
+};
+$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Okey!</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf einen Mitspieler, um Gesten gezielt zu schicken. Nochmals tippen bedeutet: an alle.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Wir zählen Rundensiege. Eine Strafpunktwertung ist in dieser Version nicht enthalten.</p>`);
+
+render(); connect();

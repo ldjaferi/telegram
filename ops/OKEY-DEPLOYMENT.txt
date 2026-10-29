@@ -1,0 +1,167 @@
+Okey – Betriebsstand 28.10.2026
+
+Bot: @GoyimGjurzi_bot
+Weboberfläche: https://goyim.xhaferi.al/okey/
+VPS: 91.214.190.222, bestehende Debian-/Node-/Caddy-Installation.
+
+Separater Dienst okey.service, aktiv und für Boot aktiviert.
+Systembenutzer okey; Code /opt/okey root-eigen.
+Zustand /var/lib/okey, Polling-Offset /var/lib/okey/bot-offset.
+Konfiguration /etc/okey/config und Token /etc/okey/bot-token: root, 0600.
+Verzeichnis /etc/okey: root, 0700. Token via systemd LoadCredential.
+Node /opt/node24/bin/node; Port 3200 nur Loopback.
+Speichergrenze 384 MB, CPUQuota 60%, keine Capabilities, Code schreibgeschützt.
+UID okey wird von derselben bestehenden Egress-Chain wie gamebot eingeschränkt.
+Keine neuen öffentlichen Ports; SSH-Regeln unverändert.
+
+Caddy routet /okey und /okey/* ohne Prefix-Stripping auf Port 3200.
+Alle übrigen Pfade weiterhin auf Snake / Port 3100. Snake bleibt aktiv.
+Rückfallkopie der ersten Einrichtung:
+/root/okey-before-20261028-195808
+
+Bot-Identität und fehlender Webhook vor Einrichtung geprüft.
+Long Polling aktiv; Bot-Beschreibung, Befehle /play /help /id und Menüknopf gesetzt.
+/start und /play liefern private Web-App-Knöpfe. Einladungen über
+https://t.me/GoyimGjurzi_bot?start=room_CODE mit sechsstelligen Tischcodes.
+Keine manuelle Main-Mini-App-Konfiguration in BotFather erforderlich.
+
+Privater Zugang übernommen: Telegram-ID 8595018821 freigeschaltet.
+ALLOW_PUBLIC_PLAY=false. Weitere IDs gezielt in ALLOWED_TELEGRAM_IDS ergänzen.
+Ein Dienstneustart beendet laufende Okey-Runden (Tische sind nur im Speicher).
+
+Prüfungen: 14 Tests lokal und auf VPS bestanden. HTTPS-Routen, Assets,
+dev=false, Ablehnung lokaler Anmeldung und Bot-Menü geprüft. Signierter
+Anmeldungstest plus echter öffentlicher WSS-Handshake über Caddy bestanden.
+Kein Test per versendeter Telegram-Nachricht im Namen des Benutzers.
+Echtes Telegram auf iOS/Android sowie Ton/Touch bleiben vom Benutzer zu testen.
+
+Rundensiege und Räume nicht persistent; nur Bot-Update-Offset wird gespeichert.
+Keine eigene externe Datensicherung oder Alarmierung für Okey eingerichtet.
+
+Update Joker-Bluff:
+- Separate Schaltfläche, nur für aktive Spieler mit aktuell gehaltenem Joker.
+- Server prüft Besitz und 8-Sekunden-Pause; Sondersteine berechtigen nicht.
+- Wackelnde, leicht behaarte Comic-Männerbrust mit Ansage für den ganzen Tisch.
+- Keine Änderung an Hand/Zug und keine Offenlegung weiterer Steine.
+- 16 Tests lokal und auf VPS bestanden, zwei WebSocket-Clients verifiziert.
+- Browser-QA: Animation und Sperre nach Joker-Abwurf; öffentliche Dateien hashgleich.
+- Nur okey.service neu gestartet. Snake und Caddy bleiben aktiv.
+- Rückfallkopie: /root/okey-before-joker-bluff-20261028-200355.tar.gz
+
+Spielbefehl auf /nisja umgestellt. Befehlsmenü und Hilfe aktualisiert; /play bleibt Alias. Drei Bot-Tests lokal und auf VPS bestanden. Telegram getMyCommands bestätigt nisja/help/id, Dienst aktiv.
+
+
+Mobiler Querformat-Hinweis eingebaut: nur schmales Touch-/Telegram-Handy im Hochformat, wegklickbar für die Sitzung und beim Drehen automatisch verborgen. Frontend ohne Neustart aktualisiert; öffentliche Dateien hashgleich geprüft. Echtes Handy noch vom Benutzer zu prüfen.
+
+
+Shisha-Update:
+- Zwei Shishas als SVG auf dem Tisch; gelegentliche kleine Züge mit Pose/Rauch.
+- Server teilt kleine Züge an alle Clients aus (aktive, verbundene Spieler/Computer).
+- Fester Zug: 3000 ms gemeinsame Rauchanimation, danach wieder klare Sicht.
+- 15 Sekunden Pause pro Tisch; kein Einfluss auf Steine, Zugfolge oder Zugzeit.
+- Reduzierte Bewegung: ruhiger leichter Schleier statt bewegter Wolken.
+- 18 Tests lokal und auf VPS bestanden; Zwei-Client-Verteilung und Pause geprüft.
+- Browserprüfung: Rauch erscheint und verschwindet; keine JS-Fehler.
+- Öffentliche Dateien hashgleich; okey, gamebot und caddy aktiv.
+- Rückfallkopie: /root/okey-before-shisha-20261028-201049.tar.gz
+
+Pyramiden-Update Joker-Bluff:
+- Grössere, kantige Comic-Männerbrüste mit facettierten Pyramidenformen.
+- Stärkeres Wackeln mit seitlichem Ausschlag, Drehung und elastischem Federn.
+- Lokal im Browser visuell geprüft; nur SVG und CSS ohne Dienstneustart eingespielt.
+- Beide öffentlichen Dateien hashgleich geprüft; Dienst aktiv.
+- Rückfallkopie: /root/okey-before-pyramid-20261028-201421.tar.gz
+
+Joker-Bluff optisch korrigiert nach Rückmeldung:
+- Runde, weich schattierte Brustformen statt kantiger Pyramiden.
+- Wackeln auf 1,2 Sekunden pro Zyklus reduziert, drei sanfte Zyklen.
+- Browseransicht geprüft; SVG/CSS ohne Neustart eingespielt.
+- Rückfallkopie: /root/okey-before-soft-bluff-20261028-201529.tar.gz
+
+Tischnamen:
+- 16 albanische/arabische Männernamen im gewünschten Te-Stil, inklusive Te Ramizi und Te Fadili.
+- Stabil aus Tischcode abgeleitet; gleicher Name für alle Gäste und nach Neuladen.
+- Anzeige in Lobby, Tischkopf und Einladungsbestätigung; Beitrittscode bleibt erhalten.
+- Syntaxprüfung und Browserprüfung inkl. Neuladen bestanden; öffentliche Dateien hashgleich.
+- Frontend ohne Neustart aktualisiert. Rückfallkopie: /root/okey-before-table-names-20261028-201648.tar.gz
+
+Öffentliche Freischaltung am 28.10.2026 auf ausdrücklichen Benutzerwunsch:
+- ALLOW_PUBLIC_PLAY=true in /etc/okey/config gesetzt; okey neu gestartet.
+- Laufender Prozess bestätigt öffentliche Freigabe und NODE_ENV=production.
+- Öffentlicher Healthcheck und Botkonfiguration OK; Anmeldung ohne Telegram weiterhin abgewiesen (401).
+- Die bisherige Einschränkung auf eine freigeschaltete Telegram-ID gilt damit nicht mehr.
+- Einstieg für alle Telegram-Nutzer: @GoyimGjurzi_bot, /nisja.
+
+Mobile Bedienbarkeit überarbeitet:
+- Bildschirmfüllendes Layout anhand der tatsächlichen WebView-Höhe (visualViewport/resize).
+- Querformat: Tisch links, eigenes Brett und 44px-Spielknöpfe rechts.
+- Hochformat: kompakter Kopf, Tisch und Brett untereinander, grössere Steine.
+- Gesten, Shisha, Bluff und Aufgeben über Mehr-Dialog; Regeln und Ton direkt zugänglich.
+- Kein erzwungenes Drehen; überlagernde Animationen bleiben über dem Brett sichtbar.
+- Browserprüfung bei 844x300, 667x280, 390x650, 360x560: kein horizontaler/vertikaler Überlauf, Tisch/Brett/Spielknöpfe vollständig sichtbar.
+- Auswählen, Abwerfen, Ziehen, Ausrichtungswechsel, Menü und Bluff im Browser bedient; kein Test auf einem echten Telegram-Handy erfolgt.
+- 18 Tests bestanden; öffentliche HTML/CSS/JS geprüft, ohne Dienstneustart eingespielt.
+- Rückfallkopie: /root/okey-before-mobile-20261028-202830.tar.gz
+
+Direkte Tischaktionen, freies Brett, Gewinnkombinationen und Musik:
+- Sieben Symbolknöpfe direkt auf dem Filz: Finger, Nase, Furz, Cay, Joker-Bluff, Shisha und Brettwerfen.
+- Private Steinpositionen frei in X/Y verschiebbar, Finger-/Maus-Pointer-Capture mit sichtbarem Mitziehen; alternativ antippen und freie Stelle wählen. Pfeiltasten bewegen ebenfalls frei.
+- Positionen werden je Tisch/Runde in sessionStorage gespeichert und bei Grössenwechsel relativ angepasst. Sortieren setzt die freie Anordnung zurück.
+- Gewinnhand partitioniert echte physische Steine in gültige Reihen/Gruppen/Paare; Joker zeigen ihren Ersatzwert. Server bleibt alleinige Gewinninstanz.
+- Eigene leise Hijaz-inspirierte Web-Audio-Musik; startet nach Interaktion während laufender Runde, stoppt bei verborgenem Fenster/Rundenende oder Stummschalten. Bestehende Tonpräferenz bleibt erhalten.
+- Browser: Ziehen an leere Stelle, Antippen, Lücke, Neuladen, Ausrichtungswechsel, vollständiger Gewinn samt gruppierter Anzeige und Ton-Schalter geprüft.
+- 22 Tests lokal und auf VPS bestanden. Alle sechs Frontend-Dateien öffentlich hashgleich geprüft. Öffentliche Freigabe und alle drei Dienste weiterhin aktiv.
+- Dienstneustart erfolgt. Rückfallkopie: /root/okey-before-free-rack-20261028-203923.tar.gz
+- Echtes Telegram-Handy und subjektive Klangwirkung bleiben vom Benutzer zu beurteilen.
+
+Shisha-Wasserblubbern:
+- Kleine automatische Züge: sechs unregelmässige Blasen plus leises Wasserrauschen, ca. 0,7 Sekunden.
+- Fester Zug: 19 Blasen und kräftigeres Wasserrauschen, ca. 1,85 Sekunden.
+- Keine doppelte Vertonung beim festen Zug; veraltete Ereignisse und verborgene Fenster bleiben still.
+- Ton ausschalten blendet laufendes Blubbern sofort aus; Audio-Nodes werden nach Ende getrennt.
+- Beide Sound-Tests lokal/auf VPS bestanden, öffentliche JS-Dateien hashgleich; ohne Neustart eingespielt.
+- Rückfallkopie: /root/okey-before-bubbles-20261028-204117.tar.gz
+
+Geräusch beim Brettordnen entfernt:
+- Freies Ziehen, Antippen, Platzieren, Pfeiltasten und Sortieren ohne Klickton.
+- Musik, Shisha und übrige Spielereignisse unverändert.
+- Syntax lokal/remote geprüft; öffentliches app.js hashgleich, Dienst ohne Neustart aktiv.
+- Rückfallkopie: /root/okey-before-quiet-rack-20261028-204505.js
+
+Feste Joker und Abwurf je Spieler, ausdrücklich vom Benutzer bestätigt:
+- Die zwei Brustmotiv-Steine sind immer Joker. Kein Anzeiger, keine Ersatzsteine; Zahlensteine bleiben unverändert. 106 Steine, Startvorrat 49.
+- Gewinnprüfung, Bots, Bluff-Berechtigung, Gewinnkombinationen, Sortierung, Bot-Hilfe und Regeln angepasst.
+- Historischer letzter Abwurf je Spieler öffentlich; beim Aufnehmen als genommen markiert, für nächste Runde zurückgesetzt. Eigener Abwurf in der Mitte, Gegner neben Avatar.
+- Serverprüfung verhindert weiterhin fremdes oder mehrfaches Aufnehmen; private Hände bleiben verborgen.
+- 24 Tests lokal/remote bestanden; Browserprüfung in Quer-/Hochformat inklusive Aufnehmen und Markierung bestanden.
+- Neue Frontend-Dateien öffentlich hashgleich, Health OK, öffentliche Freigabe weiterhin an, alle Dienste aktiv.
+- Rückfallkopie: /root/okey-before-fixed-jokers-20261028-204958.tar.gz
+
+Kurze Touch-Auswahl korrigiert:
+- Auswahl direkt beim Loslassen nach kurzem Tipp, kein künstlicher Element-Klick mehr.
+- Nachfolgender Browser-Kompatibilitätsklick wird abgefangen und kann Auswahl nicht doppelt umschalten.
+- Touch-Bewegungstoleranz 8px; Drag bleibt ohne Haltezeit möglich.
+- Zwei gezielte Regressionstests lokal/remote bestanden; kurzes Aus-/Abwählen im Browser geprüft.
+- Öffentliches app.js/rack.js hashgleich, ohne Neustart eingespielt.
+- Rückfallkopie: /root/okey-before-tap-20261028-205237.tar.gz
+
+Magnetische Kombinationen und kollisionsfreies Brett:
+- Zwei Leisten, horizontale Lücken; Reihen/Farbgruppen/Paare rasten zusammen, vollständige Gruppen grün markiert.
+- Ganze Gruppen gemeinsam ziehen; Einzelstein durch Antippen vor dem Ziehen herauslösen. Kurze Auswahl und lautloses Ordnen erhalten.
+- Andere Steine weichen aus, bei voller Leiste auf die zweite; Steingrösse berücksichtigt schmale/niedrige Brettflächen.
+- Gruppen und gespeicherte Geometrie über Formatwechsel und Neuladen erhalten. Natürliche Kombinationen vor unnötigem Joker-Einsatz bevorzugt.
+- 32 Tests lokal und auf VPS bestanden; 250 deterministische Verschiebe-/Resize-Szenarien ohne Kollision/Steinverlust.
+- Browser: Reihe 1-2-3, drei verschiedenfarbige 5er, Bündelziehen und Herauslösen geprüft; 844x300, 667x280 und 360x560 ohne Überdeckung/Überlauf.
+- Ohne Dienstneustart eingespielt; Dienst aktiv, alle drei öffentlichen Frontend-Dateien hashgleich.
+- Rückfallkopie: /root/okey-before-magnets-20261028-210252.tar.gz
+- Echte Telegram-Touchgeräte weiterhin vom Benutzer zu beurteilen.
+
+Grössere Gegnerabwürfe:
+- Bei mindestens 350px Tischhöhe: Abwurf 52x70px direkt unter jedem Gegner, statt 24x33px neben dem Avatar. Vorrat/Aufnahme darunter angeordnet.
+- Engere Ansichten: 32x43px, flaches Querformat 28x38px; Namen mit zusätzlichem Abstand. Desktop 36x48px.
+- Browserprüfung in 390x650, 360x560 und 667x280; Tisch, Brett und Spielaktionen innerhalb der Ansicht.
+- Nur CSS, ohne Neustart eingespielt; öffentliches CSS hashgleich und Dienst aktiv.
+
+Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
+- Gemeinsames Zeitbudget für Ziehen und Abwerfen, Regeln und README angepasst.
+- 32 Tests lokal/remote bestanden. Dienst neu gestartet und aktiv; öffentliche app.js hashgleich.

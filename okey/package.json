@@ -1,0 +1,19 @@
+{
+  "name": "okey-ehre",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node --watch src/main.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/game.js && node --check src/server.js && node --check src/bot.js && node --check src/main.js && node --check public/app.js && node --check public/rack.js && node --check public/melds.js && node --check public/music.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

@@ -1,0 +1,10 @@
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=3100
+PUBLIC_URL=https://goyim.xhaferi.al
+DB_PATH=/var/lib/gamebot/snake.sqlite
+TRUST_PROXY=true
+BOT_USERNAME=
+ADMIN_TELEGRAM_IDS=
+ALLOWED_TELEGRAM_IDS=
+ALLOW_PUBLIC_PLAY=false
