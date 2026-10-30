@@ -74,7 +74,6 @@ let newTileId = null, newTileKey = '', newTileTimer, jokerTimer;
 let muted = localStorage.getItem('okey-muted') === 'true', audio, music, tileClack;
 let audioUnlocked = false, suppressClickUntil = 0;
 const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); if(move?.contact&&!muted&&!document.hidden)tileClack?.play(); } });
-for(const button of [...document.querySelectorAll('.gestures button'), $('#bluff'), $('#shisha'), $('#fun-button')]) $('#table-actions').append(button);
 // Keep the existing wire ID so active rooms can receive the replacement action without a restart.
 $('[data-gesture="fart"] span').innerHTML = juiceArt;
 $('[data-gesture="tea"] span').innerHTML = cayArt;
@@ -144,11 +143,11 @@ fitViewport();
 const inviteMenu = document.createElement('section');
 inviteMenu.className = 'invite-menu';
 inviteMenu.hidden = true;
-inviteMenu.innerHTML = '<strong>Freund an den Tisch holen</strong><p>Einladungslink kopieren und deinem Freund schicken.</p><button class="button primary" data-action="invite">Einladungslink kopieren ↗</button>';
+inviteMenu.innerHTML = '<strong id="menu-table-name"></strong><p id="menu-table-info"></p><button class="button primary" data-action="invite">Freunde einladen · Link kopieren</button>';
 $('#tools-content').prepend(inviteMenu);
-$('#tools-button').onclick = () => { inviteMenu.hidden = !room; $('#tools-content').append($('#table-tools')); $('#tools-dialog').showModal(); };
+$('#tools-button').onclick = () => { $('#tools-dialog').showModal(); $('#tools-content').scrollTop = 0; };
 $('#close-tools').onclick = () => $('#tools-dialog').close();
-$('#tools-dialog').addEventListener('close', () => { document.querySelector('main').append($('#table-tools')); $('#tools-button').focus(); });
+$('#tools-dialog').addEventListener('close', () => $('#tools-button').focus());
 $('#fun-button').onclick = () => { $('#fun-dialog').showModal(); $('#fun-button').setAttribute('aria-expanded', 'true'); };
 $('#close-fun').onclick = () => $('#fun-dialog').close();
 $('#fun-dialog').addEventListener('close', () => {
@@ -371,7 +370,6 @@ function renderCenter() {
     const detail=room.matchComplete?(result.winner?`Letzte Runde gewonnen: ${result.name}${result.joker?' · Joker-Abschluss':''}.`:'Letzte Runde: Vorrat leer.'):result.joker?'E mshele me Joker. Bravo i ke gjek.':result.kind==='pairs'?'Sieben Paare. Doppelt frech.':result.kind==='stock'?'Vorrat leer. Restpunkte zählen für alle.':'';
     const celebrate=room.matchComplete?room.matchWinners.length===1:Boolean(result.winner);
     $('#center').innerHTML = `<p class="result-title">${title}</p>${finalNames||team?`<p class="result-winners">${esc(finalNames||team)}</p>`:''}${celebrate?`<p class="result-quip">${esc(victoryLine())}</p>`:''}${detail?`<p class="result-copy">${esc(detail)}</p>`:''}<div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
-    if(room.awards?.length) $('#center').insertAdjacentHTML('beforeend',`<div class="round-awards">${room.awards.map(x=>`<p>${esc(x)}</p>`).join('')}</div>${room.socialReport?'<button class="button secondary" data-social="report">Partie-Bericht ansehen</button>':''}`);
     $('#center').insertAdjacentHTML('beforeend', `<div class="result-fun"><button class="button secondary" data-action="tea-bill">☕ Çay-Rechnung</button>${canMakeExcuse(room, room.players.findIndex(p => p.id === user.id)) ? '<button class="button secondary" data-gesture="excuse">🙄 Ausrede finden</button>' : ''}</div><p class="tea-caption">${esc(teaBill(room)?.caption || '')}</p>`);
     return;
   }
@@ -413,7 +411,7 @@ function renderShisha() {
   const active = connected && !funBlocked() && room?.status === 'playing' && !me()?.out;
   $('#shisha').disabled = !active || seconds > 0;
   const hint = !room || room.status !== 'playing' ? 'Drei Sekunden Rauch für den ganzen Tisch.' : me()?.out ? 'Du schaust zu. Die Shisha wartet auf die nächste Runde.' : seconds ? `Erst wieder klare Sicht … noch ${seconds}s.` : 'Einmal kräftig ziehen. Alle sitzen drei Sekunden im Nebel.';
-  $('#shisha-hint').textContent = hint; $('#shisha').title = hint;
+  $('#shisha').title = hint;
 }
 function renderBluff() {
   const seconds = Math.max(0, Math.ceil(((room?.bluffReadyAt || 0) - Date.now() - serverOffset) / 1000));
@@ -423,7 +421,7 @@ function renderBluff() {
     : me()?.out ? 'Du schaust zu. Bluffen geht erst wieder nächste Runde.'
     : !room.canBluff ? 'Dafür brauchst du einen Joker auf deinem Brett.'
     : seconds > 0 ? `Kurz durchatmen … noch ${seconds}s.` : 'Zeig allen: Ich habe einen Joker!';
-  $('#bluff-hint').textContent = hint; $('#bluff').title = hint;
+  $('#bluff').title = hint;
 }
 function render() {
   document.body.classList.toggle('in-game', Boolean(room));
@@ -431,12 +429,17 @@ function render() {
   document.body.dataset.stage = room?.status || 'welcome';
   renderSeats(); renderCenter(); renderRack(); syncMusic(); renderHostTools();
   if(room?.paused) clearSmoke();
-  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'Gjurzi · FESTE JOKER <span>•</span> 4 PLÄTZE';
+  const roundLabel = room ? `Runde ${room.round || '–'} / ${room.roundLimit}` : '';
+  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div class="table-code">CODE ${room.code}</div>` : 'Gjurzi · 4 Plätze';
+  $('#round-tag').hidden = !room; $('#round-tag').textContent = roundLabel;
+  inviteMenu.hidden = !room;
+  $('#menu-table-name').textContent = room ? tableName(room.code) : '';
+  $('#menu-table-info').textContent = room ? `Code ${room.code} · ${roundLabel}` : '';
   $('#round-pill').textContent = !room ? 'DEIN LIEBLINGSTISCH IST FREI.' : room.status === 'lobby' ? room.owner === user.id ? 'FREIE PLÄTZE ÜBERNEHMEN COMPUTER.' : 'DER GASTGEBER STARTET DIE RUNDE.' : room.status === 'finished' ? 'DIE NÄCHSTE RUNDE WIRD PERSÖNLICH.' : me()?.out ? 'DU SCHAUST ZU. DIE ANDEREN SPIELEN WEITER.' : myTurn() ? room.phase === 'draw' ? 'DU BIST DRAN · ZIEH EINEN STEIN.' : 'DU BIST DRAN · WIRF EINEN STEIN AB.' : `${room.players[room.turn]?.name.toUpperCase()} IST DRAN.`;
   $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}` : 'DEIN BRETT'}`;
-  $('#target-label').textContent = target && room?.players.some(p => p.id === target) ? `An ${room.players.find(p => p.id === target).name} · Avatar zum Abwählen` : 'An den ganzen Tisch';
+  $('#table-actions').setAttribute('aria-label', target && room?.players.some(p => p.id === target) ? `Gesten an ${room.players.find(p => p.id === target).name}` : 'Gesten und Spassaktionen an den ganzen Tisch');
   renderClock();
-  $('#scores-button').disabled = !room;
+  $('#scores-button').disabled = !room; $('#tools-button').disabled = !room;
   if ($('#modal').open && $('#modal-content').dataset.view === 'scores') showScores();
 }
 function renderClock() {

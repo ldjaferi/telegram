@@ -49,7 +49,22 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     room.players[0].hand=Array.from({length:15},(_,i)=>({id:`invalid-${i}`,color:i===14?3:0,number:i===14?12:13}));
     await sync(); room.players[0].lastGesture=-Infinity;
     const hand=structuredClone(room.players[0].hand);
-    await host.click('#tools-button'); await host.locator('[data-gesture=besa]').click();
+    await host.click('#tools-button');
+    assert.equal(await host.locator('#tools-dialog [data-gesture=besa]').count(),0,'Besa is not under More');
+    await host.click('#close-tools');
+    await host.click('#fun-button');
+    assert.equal(await host.locator('#fun-button').getAttribute('aria-expanded'),'true');
+    assert.equal(room.players[0].out,false,'opening the action menu does not surrender');
+    await capture(host,'action-menu');
+    await host.keyboard.press('Escape');
+    await host.waitForFunction(()=>document.activeElement.id==='fun-button');
+    assert.equal(await host.locator('#fun-button').getAttribute('aria-expanded'),'false');
+    await host.click('#fun-button'); await host.getByRole('button',{name:'Fuge drasen',exact:true}).click();
+    await host.waitForSelector('#confirm-throw');
+    assert.equal(room.players[0].out,false,'choosing Fuge drasen still waits for confirmation');
+    await host.click('#keep-board'); assert.deepEqual(room.players[0].hand,hand);
+    await host.click('#fun-button'); await host.locator('[data-gesture=besa]').click();
+    assert.equal(await host.locator('#fun-dialog').evaluate(d=>d.open),false);
     await Promise.all(pages.map(p=>p.waitForSelector('.fun-announcement')));
     for(const p of pages)assert.equal(await p.locator('.fun-announcement .event-copy').innerText(),'Besa, ich habe keinen Joker!');
     assert.deepEqual(room.players[0].hand,hand); await capture(host,'besa');
@@ -60,7 +75,7 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     assert.deepEqual(await host.evaluate(()=>window.testTones),[],'muted invalid claim is silent');
     assert.deepEqual(room.players[0].hand,hand); assert.equal(room.turn,0);
     await host.click('[data-action=dismiss-message]'); await host.click('#sound');
-    await host.evaluate(()=>window.testTones=[]); await host.click('#claim'); await host.waitForSelector('.invalid-claim');
+    await host.evaluate(()=>window.testTones=[]); await host.locator('#rack-tiles .tile').first().click(); await host.click('#claim'); await host.waitForSelector('.invalid-claim');
     assert.ok((await host.evaluate(()=>window.testTones)).includes('sawtooth'),'unmuted invalid claim plays the brass voice');
     await capture(host,'invalid-claim'); await host.click('[data-action=dismiss-message]'); await host.click('#sound');
 
@@ -73,6 +88,11 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     await Promise.all(pages.map(p=>p.waitForFunction(()=>document.body.dataset.stage==='finished')));
     assert.equal(await host.locator('[data-gesture=excuse]').count(),1);
     assert.equal(await other.locator('[data-gesture=excuse]').count(),0);
+    await other.click('#tools-button');
+    assert.equal(await other.locator('#host-tools [data-host]').count(),0,'guests do not see host controls');
+    await other.locator('[data-section=awards] summary').click();
+    assert.equal(await other.locator('.host-awards li').count(),room.awards.length,'round awards remain available in More');
+    await other.click('#close-tools');
     await capture(host,'result');
     await host.click('[data-action=tea-bill]'); await host.waitForSelector('.tea-bill');
     assert.match(await host.locator('.tea-bill').innerText(),/Arben.*Dritan/s);
@@ -86,7 +106,14 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     const line=room.events.at(-1).line;
     for(const p of pages)assert.equal(await p.locator('.fun-announcement .event-copy').innerText(),line);
     await capture(host,'excuse');
-    await other.click('#tools-button'); assert.equal(await other.locator('[data-gesture=besa]').isDisabled(),true);
+    await other.click('#fun-button'); assert.equal(await other.locator('[data-gesture=besa]').isDisabled(),true);
+    await other.click('#close-fun');
+    await host.click('[data-action=start]'); await host.waitForFunction(()=>document.body.dataset.stage==='playing');
+    await host.click('#fun-button'); await host.getByRole('button',{name:'Fuge drasen',exact:true}).click();
+    await host.click('#confirm-throw');
+    await host.waitForFunction(()=>document.querySelector('#seat-top') && document.querySelector('#turn-label').textContent.includes('Brett weg'));
+    assert.equal(room.players[0].out,true,'confirmation really surrenders the round');
+    assert.equal(room.status,'playing','remaining players continue');
     assert.deepEqual(errors,[]);
   } finally {await browser.close(); await app.close();}
 });

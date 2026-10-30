@@ -7,7 +7,7 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 
 const viewports = [
-  [320, 640], [375, 600], [390, 720], [412, 780], [768, 1024],
+  [320, 600], [320, 640], [375, 600], [390, 720], [390, 736], [412, 780], [768, 1024],
   [844, 390], [1024, 600], [1366, 768], [1440, 900]
 ];
 const screenshotDir = process.env.LAYOUT_SCREENSHOT_DIR;
@@ -32,6 +32,7 @@ async function geometry(page) {
       seats: all('.seat'), players: all('.player-info'), discards: all('.seat-discard'),
       piles: all('.piles .tile,.piles .tile-back,.piles .no-discard,.piles .empty-tile'),
       menu: all('.table-heading'), toolbar: all('#table-actions'), metadata: all('.rack-meta'),
+      header: all('#room-tag,#round-tag,#scores-button,#tools-button,#sound,#rules,.brand-message'),
       rack: all('#rack')[0], tiles: all('#rack-tiles [data-tile]'), playButtons: all('.play-actions button'),
       copy: all('#center .welcome-title,#center .welcome-sub,#center .welcome-buttons button,#center .center-links'),
       textAndButtons: all('#center p,#center strong,#center button,#center .match-settings-summary'),
@@ -48,14 +49,16 @@ function assertSeparate(rects, message) {
   for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++)
     assert.ok(!overlaps(rects[i], rects[j]), `${message}: rectangles ${i} and ${j}`);
 }
-function assertViewport(g) {
+function assertViewport(g, scrollingEntry = false) {
   assert.ok(g.scrollWidth <= g.width + 1, `${g.stage}: horizontal overflow`);
-  assert.ok(g.scrollHeight <= g.height + 1, `${g.stage}: vertical overflow (${g.scrollHeight}/${g.height})`);
+  if (!scrollingEntry) assert.ok(g.scrollHeight <= g.height + 1, `${g.stage}: vertical overflow (${g.scrollHeight}/${g.height})`);
 }
 function assertPlaying(g) {
   assertViewport(g);
   assert.equal(g.tiles.length, 15, 'all fifteen tiles remain visible');
   assertSeparate(g.tiles, 'rack tiles overlap');
+  assertSeparate(g.header, 'header items overlap');
+  if (g.width <= 600 && g.height > g.width) assert.ok(g.height - g.rack.bottom <= 12, 'board is anchored at the bottom without an empty action row');
   assertSeparate([...g.discards, ...g.piles], 'public tiles overlap');
   assertSeparate([...g.menu, g.table, ...g.toolbar, ...g.metadata, g.rack, ...g.playButtons], 'interface sections overlap');
   for (const player of g.players) assert.ok(!overlaps(player, g.felt), 'player intrudes onto felt');
@@ -66,6 +69,14 @@ function assertPlaying(g) {
   const boardExtra = g.rack.height - 2 * g.tiles[0].height;
   assert.ok(boardExtra >= 24 && boardExtra <= 36, `rack height should follow two tile rows, got ${boardExtra}px spare`);
   for (const button of g.playButtons) assert.ok(button.bottom <= g.height, 'play button below viewport');
+}
+async function assertControlsReachable(page, selector) {
+  for (const el of await page.locator(selector).all()) {
+    if (!await el.isVisible()) continue;
+    await el.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.ok(await el.evaluate(el => { const r=el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); }), `control is reachable: ${await el.textContent()}`);
+  }
 }
 async function capture(page, viewport, stage) {
   if (screenshotDir) {
@@ -80,6 +91,7 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const context = await browser.newContext({ viewport: { width: viewport[0], height: viewport[1] }, hasTouch: true, reducedMotion: 'reduce' });
   const page = await context.newPage(), errors = [];
+  page.setDefaultTimeout(5000);
   page.on('pageerror', error => errors.push(error.message));
   await page.route('https://telegram.org/**', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
   await page.addInitScript(() => {
@@ -97,9 +109,10 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     await page.goto(`http://127.0.0.1:${app.server.address().port}/?name=GastgeberMitLangemNamen`);
     await page.waitForFunction(() => document.querySelector('#connection').textContent === 'LOKAL AM TISCH');
     let g = await geometry(page);
-    assertViewport(g); assert.equal(g.seats.length, 0, 'no demo players collide with the welcome text');
+    assertViewport(g, true); assert.equal(g.seats.length, 0, 'no demo players collide with the welcome text');
     assertSeparate(g.copy, 'welcome text and buttons overlap');
-    assert.ok(g.controls.every(c => c.reachable), 'welcome controls are reachable');
+    await assertControlsReachable(page, '#center button,#center a');
+    await page.evaluate(() => scrollTo(0, 0));
     await capture(page, viewport, 'welcome');
 
     await page.click('[data-action=create]');
@@ -109,9 +122,10 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     const room = [...app.arena.rooms.values()][0];
     for (const [id, name] of [['b', 'Kollege mit langem Namen'], ['c', 'TeampartnerMitLangemNamen'], ['d', 'Noch ein längerer Spielername']]) app.arena.join({ id, name }, room.code);
     await sync(room);
-    g = await geometry(page); assertViewport(g);
+    g = await geometry(page); assertViewport(g, true);
     assert.equal(g.seats.length, 0, 'lobby uses the team picker, not overlapping seat previews');
-    assert.ok(g.controls.every(c => c.reachable), 'lobby buttons are visible and reachable');
+    await assertControlsReachable(page, '#center button,#center a');
+    await page.evaluate(() => scrollTo(0, 0));
     assertSeparate(g.textAndButtons, 'lobby text and buttons overlap');
     await capture(page, viewport, 'lobby');
     await page.click('[data-action=settings]');
@@ -125,9 +139,37 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     assertPlaying(await geometry(page));
     await capture(page, viewport, 'playing');
 
+    assert.equal(await page.locator('#room-tag .table-code').innerText(), `CODE ${room.code}`);
+    assert.equal(await page.locator('#round-tag').innerText(), 'Runde 1 / 5');
+    assert.ok(await page.locator('#room-tag').evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'code does not overflow');
+    await page.click('#tools-button');
+    const menuBox = await page.locator('#tools-dialog').boundingBox();
+    assert.ok(menuBox.x>=0 && menuBox.y>=0 && menuBox.x+menuBox.width<=viewport[0] && menuBox.y+menuBox.height<=viewport[1], 'table menu fits viewport');
+    assert.equal(await page.locator('#tools-dialog [data-gesture]').count(),0,'fun actions stay in the lightning menu');
+    assert.equal(await page.locator('#host-tools details[open]').count(),0,'secondary controls start collapsed');
+    await assertControlsReachable(page, '#tools-dialog button,#tools-dialog summary');
+    await capture(page, viewport, 'menu');
+    await page.locator('[data-section=players] summary').click();
+    assert.equal(await page.locator('.host-player').count(),3);
+    await assertControlsReachable(page, '.host-player button');
+    await page.locator('[data-host=lock]').click();
+    await page.waitForSelector('[data-host=unlock]');
+    assert.equal(await page.locator('[data-section=players]').getAttribute('open'),'','expanded section survives a live update');
+    await page.locator('[data-host=unlock]').click();
+    await page.waitForSelector('[data-host=lock]');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.activeElement.id === 'tools-button');
+    await page.click('#fun-button');
+    await assertControlsReachable(page, '#fun-dialog button');
+    await page.click('#close-fun');
+
     // Exercise the real touch handlers and verify the board still contains every tile.
     const tile = page.locator('#rack-tiles [data-tile]').first(), id = await tile.getAttribute('data-tile');
     await tile.tap();
+    await page.waitForSelector('#tile-action-popover:not([hidden])');
+    const popover = await page.locator('#tile-action-popover').boundingBox();
+    assert.ok(popover.x>=0 && popover.y>=0 && popover.x+popover.width<=viewport[0] && popover.y+popover.height<=viewport[1], 'selected-tile actions fit viewport');
+    await assertControlsReachable(page, '#tile-action-popover button');
     const before = await tile.boundingBox(), layer = await page.locator('#rack-tiles').boundingBox();
     const cdp = await context.newCDPSession(page);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: before.x + before.width / 2, y: before.y + before.height / 2 }] });
@@ -136,6 +178,8 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     const after = await page.locator(`[data-tile="${id}"]`).boundingBox();
     assert.ok(Math.abs(after.x - before.x) > 10, 'touch can move a tile across the board');
     assertPlaying(await geometry(page));
+    await page.click('.tile-action-dismiss');
+    assert.equal(await page.locator('#tile-action-popover').isVisible(), false, 'tile menu can be dismissed before sorting');
     await page.click('#sort-combinations'); assertPlaying(await geometry(page));
 
     // A live resize must preserve tile geometry and the compact two-row board.
