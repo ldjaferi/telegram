@@ -206,3 +206,12 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   hashgleich mit Release; healthz erfolgreich; okey und gamebot aktiv.
 - sudo-Sperre nach Installation wiederhergestellt.
 - Rückfallverzeichnis: /opt/okey-before-55bd1c7-20261029T144528Z
+
+30.10.2026 — Lobby/Browser/Timeout vorbereitet, NICHT live (6fadfaf)
+- Teamwahl A/B nebeneinander, tatsächliche Sitzpositionen links/rechts/gegenüber.
+- Öffentliche Partien erlauben Browser-Gäste mit servergenerierter Identität;
+  Gruppenbot bietet zusätzlichen Browserlink. Private Freigaben bleiben erhalten.
+- Dreifaches Tischklopfen zeigt Comic-Easter-Egg. Zehn Minuten ohne erfolgreiche
+  menschliche Aktion schliessen Tische und entfernen sie bei verbundenen Clients.
+- 51 Tests, Syntax und DOM-Integration inklusive Teamwahl/Easter-Egg bestanden.
+- Deployment ausstehend: Remote Commander meldet ov-c992dc offline, zuletzt 26h.
