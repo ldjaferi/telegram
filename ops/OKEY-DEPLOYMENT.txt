@@ -309,3 +309,12 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   okey/gamebot/caddy aktiv. sudo-Sperre wiederhergestellt.
 - Rückfallkopie: /home/debian/before-3133dc3-style.css;
   Installationsskript: /home/debian/install-3133dc3.sh.
+
+30.10.2026 — Abwurfpositionen getauscht
+- Release 6ea57f7: Nehmen links, Ziehstapel mittig, eigener Abwurf rechts.
+  Darstellung folgt der Spielrichtung vom linken Nachbarn zum rechten.
+- Syntax und elf Chromium-Prüfungen bestanden, Handyansicht visuell geprüft.
+- app.js ohne Neustart installiert; HTTPS-Datei bytegleich, healthz OK,
+  alle drei Dienste aktiv. sudo-Sperre wiederhergestellt.
+- Rückfallkopie: /home/debian/before-6ea57f7-app.js;
+  Installationsskript: /home/debian/install-6ea57f7.sh.
