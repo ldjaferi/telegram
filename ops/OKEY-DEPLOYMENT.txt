@@ -223,3 +223,22 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - Browser-Gastanmeldung über HTTPS erfolgreich, healthz OK,
   okey und gamebot aktiv.
 - Rückfallverzeichnis: /opt/okey-before-6fadfaf-20261030T191926Z
+
+30.10.2026 — Kompaktes Brett und getrennte Ansichten live (1143fb3)
+- Brett: zwei Reihen in tatsächlicher Steinhöhe plus 32px für Rand und Leisten.
+  Tischsteine unabhängig vergrössert; Spieler weiterhin ausserhalb des Filzes.
+- Keine Vorschau-Gegner auf der Startseite. Warteraum im kurzen Querformat
+  mit eigenen Spalten; Tablet-Hochformat ohne unbeabsichtigte zweite Spielspalte.
+  Ergebnis hat eine eigene Fläche ohne überlagerte Abwürfe oder Spielernamen.
+- 51 Spiel-/Server-/Interaktionstests und Syntaxprüfung bestanden.
+- Neun echte Chromium-Prüfungen von 320x640 bis 1440x900 bestanden:
+  Start, Lobby, Spiel, Ergebnis, lange Namen, Touch-Drag und Formatwechsel.
+  Wiederholbar über okey/test/layout.browser.cjs (pnpm test:layout).
+- app.js/style.css via Remote Commander ohne Dienstneustart installiert.
+  Alte und neue Hashes vor Austausch geprüft, Rückfallkopien angelegt.
+  Laufende Partien bleiben erhalten. okey und gamebot aktiv, healthz OK.
+- Öffentliche HTTPS-Dateien entsprechen bytegenau den installierten Dateien.
+  sudo-Sperre nach Installation wiederhergestellt.
+- Rückfallkopien: /home/debian/before-1143fb3-app.js und
+  /home/debian/before-1143fb3-style.css. Installationsskript:
+  /home/debian/install-gjurzi-1143fb3.sh.
