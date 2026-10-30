@@ -147,8 +147,10 @@ async function connect() {
   try {
     config ||= await (await fetch(apiUrl('/api/config'))).json();
     if (!token) {
-      if (!config.dev && !telegram?.initData) throw Error('Öffne dieses Spiel über den Telegram-Bot.');
-      const login = await post('/api/login', { initData: telegram?.initData || '', name: new URLSearchParams(location.search).get('name') || 'Gast' });
+      if (!config.dev && !config.guestAccess && !telegram?.initData) throw Error('Öffne dieses Spiel über den Telegram-Bot.');
+      let guestName = '';
+      if (!telegram?.initData && !config.dev) guestName = await new Promise(resolve => { modal('<h2>Willkommen am Tisch!</h2><form id=guest-form><label for=guest-name>Wie heisst du?</label><input id=guest-name maxlength=24 required autocomplete=nickname><button class=button type=submit>Hajde bojrum →</button></form>'); $('#guest-form').onsubmit = e => { e.preventDefault(); const name = $('#guest-name').value.trim(); if(name){ $('#modal').close(); resolve(name); } }; });
+      const login = await post('/api/login', { initData: telegram?.initData || '', name: guestName || new URLSearchParams(location.search).get('name') || 'Gast' });
       token = login.token; user = login.user; sessionStorage.setItem('okey-token', token);
     }
     const ticket = await post('/api/ticket'); user = ticket.user;
@@ -215,7 +217,7 @@ function renderCenter() {
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><div class="lobby-code" aria-label="Tischcode">${room.code}</div><div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><p>Du bist dabei, ${esc(user.name)}!</p>${teamChoiceMarkup()}<div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {
@@ -268,6 +270,7 @@ function renderBluff() {
 }
 function render() {
   document.body.classList.toggle('in-game', Boolean(room));
+  document.body.classList.toggle('in-lobby', room?.status === 'lobby');
   document.body.dataset.stage = room?.status || 'welcome';
   renderSeats(); renderCenter(); renderRack(); syncMusic();
   $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'OKEY · FESTE JOKER <span>•</span> 4 PLÄTZE';
@@ -353,7 +356,7 @@ function showWinningHand(){
 }
 
 async function invite() {
-  const link = config.botUsername ? `https://t.me/${config.botUsername}?startapp=room_${room.code}` : `${appBase.href}?room=${room.code}`;
+  const link = config.botUsername && telegram?.initData ? `https://t.me/${config.botUsername}?startapp=room_${room.code}` : `${appBase.href}?room=${room.code}`;
   try { await navigator.clipboard.writeText(link); toast(`${tableName(room.code)}: Einladung kopiert. Tischcode: ${room.code}`); }
   catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
 }
@@ -369,6 +372,7 @@ document.addEventListener('click', e => {
     const other = room?.players.find(p => p.id === player.dataset.target);
     if (room?.mode === 'teams' && other && other.team === me()?.team && !other.bot) { teamMenu(other); return; }
     target = target === player.dataset.target ? null : player.dataset.target; render(); return; }
+  const team = e.target.closest('[data-team-choice]'); if(team){send('choose-team',{team:Number(team.dataset.teamChoice)});return;}
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (action === 'dismiss-message') { $('#modal').close(); return; }
   if (action === 'solo' || action === 'create') setupTable(action === 'solo');
@@ -459,3 +463,14 @@ function celebrateJoker(event) {
   telegram?.HapticFeedback?.notificationOccurred('success');
   jokerTimer = setTimeout(() => { table.classList.remove('joker-finale'); $('#table-event').replaceChildren(); }, 2600-age);
 }
+
+function teamChoiceMarkup() {
+  if(room.mode !== 'teams') return '';
+  return `<div class="team-picker">${[0,1].map(team => `<section><strong>Team ${team ? 'B' : 'A'}</strong><p>${room.players.filter(p=>p.team===team&&!p.bot).map(p=>esc(p.name)).join(' &amp; ') || 'Noch frei'}</p><button class="button secondary" data-team-choice="${team}">${me()?.team===team?'✓ Dein Team':'Hier mitspielen'}</button></section>`).join('')}</div><p>Team wählen: links A, rechts B. Im Spiel sitzt dein Partner dir gegenüber.</p>`;
+}
+let tableKnocks = [];
+$('.table').addEventListener('click', e => {
+  if(e.target.closest('button,a,input,.seat')) return;
+  const now=Date.now(); tableKnocks=tableKnocks.filter(t=>now-t<1600);tableKnocks.push(now);
+  if(tableKnocks.length===3){tableKnocks=[];modal('<h2>E xhete ni bole te mqeft</h2><img src="egg.svg" alt="Zwei lustige Comic-Hoden" width="240" height="200"><button class="button primary" data-action="dismiss-message">Weiter spielen</button>');}
+});

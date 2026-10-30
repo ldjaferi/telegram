@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Arena } from './game.js';
 import { Sessions, validateTelegram } from './auth.js';
 
-const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/team-chat.js', 'team-chat.js'], ['/style.css', 'style.css'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
+const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/team-chat.js', 'team-chat.js'], ['/style.css', 'style.css'], ['/egg.svg', 'egg.svg'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml' };
 export function createApplication(config = {}) {
   config = { host: '127.0.0.1', port: 3200, dev: true, publicUrl: 'http://127.0.0.1:3200', allowedIds: [], allowPublic: false, ...config };
@@ -40,7 +40,7 @@ export function createApplication(config = {}) {
       const ws = sockets.get(p.id);
       if (ws?.readyState === WebSocket.OPEN) {
         if (ws.bufferedAmount > 256000) ws.close(1013, 'Verbindung zu langsam');
-        else ws.send(JSON.stringify({ type: 'state', room: arena.snapshot(r, p.id) }));
+        else ws.send(JSON.stringify({ type: 'state', room: r.expired ? null : arena.snapshot(r, p.id) }));
       }
     }
   }
@@ -57,13 +57,13 @@ export function createApplication(config = {}) {
         if (file === 'index.html') data = data.toString().replace('__APP_BASE__', prefix + '/');
         res.writeHead(200, { 'Content-Type': mime[file.split('.').at(-1)], 'Cache-Control': 'no-cache' }); return res.end(data);
       }
-      if (req.method === 'GET' && path === '/api/config') return json(res, 200, { dev: config.dev, botUsername: config.botUsername || '' });
+      if (req.method === 'GET' && path === '/api/config') return json(res, 200, { dev: config.dev, guestAccess: config.allowPublic, botUsername: config.botUsername || '' });
       if (req.method !== 'POST' || !originAllowed(req.headers.origin)) return json(res, 403, { error: 'Anfrage nicht erlaubt.' });
       rate(`http:${req.socket.remoteAddress}`, 150, 60000);
       const data = await body(req);
       if (path === '/api/login') {
         rate(`login:${req.socket.remoteAddress}`, 30, 60000);
-        const user = data.initData ? validateTelegram(data.initData, config.botToken) : config.dev ? { id: `local-${randomUUID()}`, name: String(data.name || 'Gast').trim().slice(0, 24) || 'Gast' } : null;
+        const user = data.initData ? validateTelegram(data.initData, config.botToken) : (config.dev || config.allowPublic) ? { id: `local-${randomUUID()}`, name: String(data.name || 'Gast').trim().slice(0, 24) || 'Gast' } : null;
         if (!user) return json(res, 401, { error: 'Öffne das Spiel über deinen Telegram-Bot.' });
         if (!config.dev && !config.allowPublic && !config.allowedIds.includes(user.id)) return json(res, 403, { error: `Du bist noch nicht freigeschaltet. Telegram-ID: ${user.id}` });
         return json(res, 200, { token: sessions.create(user), user });
@@ -98,6 +98,7 @@ export function createApplication(config = {}) {
             arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
           }
           else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase());
+          else if (m.type === 'choose-team') arena.chooseTeam(user.id, m.team);
           else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit });
           else if (m.type === 'new-match') arena.newMatch(user.id);
           else if (m.type === 'start') {
@@ -115,7 +116,8 @@ export function createApplication(config = {}) {
           else if (m.type === 'shisha') arena.shisha(user.id);
           else if (m.type === 'leave') { broadcast(arena.leave(user.id)); ws.send(JSON.stringify({ type: 'state', room: null })); return; }
           else throw Error('Unbekannte Aktion.');
-          broadcast(arena.roomFor(user.id));
+          const active = arena.roomFor(user.id); if (active) active.humanActivity = arena.now();
+          broadcast(active);
         } catch (error) { ws.send(JSON.stringify({ type: 'error', message: error.message, ...(error.code === 'invalid_claim' ? { code: error.code } : {}) })); }
       });
       ws.on('close', () => {

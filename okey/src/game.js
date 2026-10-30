@@ -86,7 +86,7 @@ export class Arena {
   groupTable(user, chatId) {
     const group = String(chatId);
     const existing = [...this.rooms.values()].find(r => r.groupChatId === group);
-    if (existing) { existing.touched = this.now(); return existing; }
+    if (existing) { existing.humanActivity = this.now(); existing.touched = this.now(); return existing; }
     if (this.roomFor(user.id)) throw Error('Du sitzt bereits an einem anderen Tisch. Verlasse ihn zuerst im Spiel und sende dann erneut /nisja.');
     const room = this.create(user);
     room.groupChatId = group;
@@ -100,7 +100,7 @@ export class Arena {
     let code; do { code = randomBytes(3).toString('hex').toUpperCase(); } while (this.rooms.has(code));
     const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5;
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
-    const r = { mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, touched: this.now() };
+    const r = { mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, humanActivity: this.now(), touched: this.now() };
     this.rooms.set(code, r);
     if (solo) this.start(user.id);
     return r;
@@ -113,7 +113,17 @@ export class Arena {
     if (!r) throw Error('Diesen Tisch gibt es nicht mehr.');
     if (r.status === 'playing' || (r.players.length >= 4 && !r.players.some(p => p.bot))) throw Error('Der Tisch ist voll oder die Runde läuft bereits.');
     const vacant = r.players.findIndex(p => p.bot);
-    if (vacant >= 0) r.players[vacant] = this.player(user); else r.players.push(this.player(user)); r.touched = this.now(); return r;
+    if (vacant >= 0) r.players[vacant] = this.player(user); else r.players.push(this.player(user)); r.humanActivity = this.now(); r.touched = this.now(); return r;
+  }
+  chooseTeam(id, team) {
+    const r = this.roomFor(id);
+    if (!r || r.status !== 'lobby' || r.round || r.mode !== 'teams' || ![0, 1].includes(team)) throw Error('Teams können nur vor der Partie gewählt werden.');
+    while (r.players.length < 4) r.players.push(this.player({id:`seat-${r.code}-${r.players.length}`,name:'Freier Platz'}, true));
+    const from = r.players.findIndex(p => p.id === id);
+    if (from % 2 === team) return;
+    const to = r.players.findIndex((p,i) => i % 2 === team && p.bot);
+    if (to < 0) throw Error('Dieses Team ist bereits voll.');
+    [r.players[from],r.players[to]] = [r.players[to],r.players[from]];
   }
   event(r, type, data = {}) { r.events.push({ seq: ++r.seq, type, at: this.now(), ...data }); r.events = r.events.slice(-20); r.touched = this.now(); }
   configure(id, options = {}) {
@@ -281,7 +291,7 @@ export class Arena {
   tick() {
     const changed = new Set();
     for (const r of this.rooms.values()) {
-      if (this.now() - r.touched > 2 * 3600000) { this.rooms.delete(r.code); continue; }
+      if (this.now() - r.humanActivity >= 600000) { this.rooms.delete(r.code); r.expired = true; changed.add(r); continue; }
       if (r.status !== 'playing') continue;
       if (this.now() >= r.nextPuffAt) {
         const smokers = r.players.filter(p => !p.out && (p.bot || p.connected));

@@ -305,3 +305,6 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
 .buj-mode .event-emoji{font-size:clamp(64px,12vw,100px);line-height:1.1}
 .buj-mode strong{font-size:26px}
 .buj-mode .event-copy{font-size:clamp(18px,4vw,26px);line-height:1.25}
+
+.team-picker{display:grid;grid-template-columns:1fr 1fr;gap:12px}.team-picker section{padding:10px;border:2px solid #d8ad6b;border-radius:10px}.team-picker p{font-size:16px}.team-picker .button{font-size:15px;padding:10px}.table .seat-left,.in-game .table .seat-left{left:2%;right:auto;top:46%;transform:translateY(-50%)}.table .seat-right,.in-game .table .seat-right{right:2%;left:auto;top:46%;transform:translateY(-50%)}.table .seat-top{top:5px;left:50%;transform:translateX(-50%)}
+.in-lobby .table .seat,.in-lobby .tea-prop,.in-lobby .round-pill{display:none}.in-lobby .table{overflow:auto;min-height:390px}.in-lobby .table .center{position:relative;top:auto;left:auto;transform:none;width:100%;max-width:100%;padding:20px 12px}.in-lobby .welcome-buttons{flex-wrap:wrap}.in-lobby .team-picker p{overflow-wrap:anywhere}
