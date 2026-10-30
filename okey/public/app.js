@@ -222,7 +222,7 @@ function renderCenter() {
   }
   if (room.status === 'finished') {
     const result = room.result;
-    $('#center').innerHTML = `<p class="result-title">${room.matchComplete ? matchTitle() : result.winner ? result.winner === user.id ? 'Okey, Champion!' : `${esc(result.name)} gewinnt!` : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Die letzte verbliebene Seite gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Vorrat leer. Restpunkte zählen für alle.' : result.joker ? 'JOKER-MSHILE! −10 für die Gewinner, doppelte Gegnerpunkte.' : 'Gute Hand. Grosse Klappe.'}</p><div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    $('#center').innerHTML = `<p class="result-title">${room.matchComplete ? matchTitle() : result.winner ? 'Ke fituar. Ani mos u lazdro.' : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Die letzte verbliebene Seite gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Vorrat leer. Restpunkte zählen für alle.' : result.joker ? 'E mshele me Joker. Bravo i ke gjek.' : ''}</p><div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
     return;
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
@@ -427,7 +427,7 @@ function markDraw(next) {
   }, Math.min(4000, remaining));
 }
 function scoreLabel(index) { return room.mode === 'teams' ? `Team ${index === 0 ? 'A' : 'B'}` : room.players[index]?.name || `Platz ${index + 1}`; }
-function matchTitle() { return room.matchWinners.length > 1 ? 'Partie unentschieden!' : `${esc(scoreLabel(room.matchWinners[0]))} gewinnt die Partie!`; }
+function matchTitle() { return room.matchWinners.length > 1 ? 'Shtahi gji de bojm? Ene nje?' : `U kry. Bravo. ${esc(scoreLabel(room.matchWinners[0]))} gewinnt.`; }
 function showScores() {
   if (!room) return;
   const labels = room.totals.map((_, i) => scoreLabel(i));
@@ -458,7 +458,7 @@ function celebrateJoker(event) {
   const table = $('.table'), age = Math.max(0, Date.now() + serverOffset - event.at);
   if (age >= 2600) return;
   clearTimeout(jokerTimer); clearTimeout(eventTimer); table.classList.remove('joker-finale'); void table.offsetWidth; table.classList.add('joker-finale');
-  $('#table-event').innerHTML = '<div class="joker-finale-banner" role="status"><strong>JOKER-MSHILE!</strong><span>−10 · GEGNER DOPPELT</span></div>';
+  $('#table-event').innerHTML = '<div class="joker-finale-banner" role="status"><strong>E mshele me Joker. Bravo i ke gjek.</strong><span>−10 · GEGNER DOPPELT</span></div>';
   for (const animation of table.getAnimations()) animation.currentTime = age;
   telegram?.HapticFeedback?.notificationOccurred('success');
   jokerTimer = setTimeout(() => { table.classList.remove('joker-finale'); $('#table-event').replaceChildren(); }, 2600-age);
