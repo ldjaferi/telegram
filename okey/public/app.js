@@ -286,7 +286,7 @@ function renderClock() {
   renderShisha();
   if (room?.status === 'playing') {
     const seconds = Math.max(0, Math.ceil((room.deadline - Date.now() - serverOffset) / 1000));
-    $('#turn-label').innerHTML = myTurn() ? `${room.phase === 'draw' ? 'Ziehen' : 'Abwerfen'} · <span class="timer">${seconds}s</span>` : me()?.out ? 'Brett weg. Trotzdem dabei.' : `${esc(room.players[room.turn]?.name)} · ${seconds}s`;
+    $('#turn-label').innerHTML = myTurn() ? `Du bist dran · ${room.phase === 'draw' ? 'Ziehen' : 'Abwerfen'} · <span class="timer">${seconds}s</span>` : me()?.out ? 'Brett weg. Trotzdem dabei.' : `${esc(room.players[room.turn]?.name)} · ${seconds}s`;
   } else $('#turn-label').textContent = 'Ein bisschen Glück. Ein bisschen Frechheit.';
 }
 setInterval(renderClock, 500);

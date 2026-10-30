@@ -463,3 +463,34 @@ body .table .seat-top .mini-rack{display:none}
     --tile-h:calc(min(var(--tile-w),var(--rack-fit-width,40px))*1.8);
   }
 }
+
+/* Separate menu, felt, social actions and the private rack. */
+body.in-game .table-heading>div:first-child{display:none}
+body .table-heading .room-tag{order:0;margin-left:0;margin-right:auto}
+body .table-heading #scores-button{order:1;margin-left:0}
+body .table-heading #tools-button{order:2;margin-left:0}
+body .table-heading{padding-bottom:4px}
+body #round-pill{display:none}
+body main>#table-actions{position:relative;inset:auto;transform:none;grid-row:3;justify-self:center;align-self:center;width:min(440px,100%);height:40px;gap:6px;margin:0;z-index:5}
+body main>#table-actions button{height:40px}
+body[data-stage=welcome] main>#table-actions,body[data-stage=lobby] main>#table-actions{display:none}
+@media(min-width:1001px) and (min-height:541px){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(230px,1fr) 44px minmax(180px,min(40%,calc(100% - 354px)));gap:12px}
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-row:4}
+  body[data-stage=playing] .table .center{bottom:20px}
+}
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(250px,1fr) 40px minmax(194px,min(40%,calc(100% - 352px)));gap:6px}
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-template-rows:98px minmax(62px,1fr) 64px}
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-row:4}
+  body .rack-meta #player-label{grid-column:1;grid-row:1;max-width:80px}
+  body .rack-meta #turn-label{grid-column:1/-1;grid-row:1;text-align:right;margin-left:84px;font-size:11px}
+  body .rack-meta #sort{grid-column:1;grid-row:2}
+  body .rack-meta #sort-combinations{grid-column:2;grid-row:2}
+}
+@media(orientation:landscape) and (max-width:1000px), (orientation:landscape) and (max-height:540px){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(0,1fr) 40px}
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-template-rows:minmax(94px,1fr) minmax(54px,1fr) 65px}
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-column:2;grid-row:2/4}
+  body main>#table-actions{grid-column:1;grid-row:3;gap:3px}
+}
