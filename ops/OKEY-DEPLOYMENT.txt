@@ -345,3 +345,23 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   healthz OK, drei Dienste aktiv, sudo-Sperre wiederhergestellt.
 - Rückfallkopien: /home/debian/before-c951bf5-{index.html,style.css,app.js};
   Installationsskript: /home/debian/install-c951bf5.sh.
+
+30.10.2026 — Besa, Ausreden, Çay-Rechnung und Denkmeister live
+- Release 40d464a: Besa unter „Mehr“, ohne Handprüfung oder Offenlegung.
+  Verlierer können eine gemeinsame, serverseitig gewählte Ausrede senden.
+  Beim letzten Ergebnis entscheidet dafür der Gesamtsieg; Sieger und
+  Gleichstandsgewinner bekommen keine Niederlagen-Ausrede.
+- Çay-Rechnung anhand der höchsten Runden-/Gesamtpunkte, mit Jokerfaktor,
+  Teams und geteilten Rechnungen. Verändert keine Spielpunkte.
+- Denkmeister einmal nach 45 Sekunden pro verbundenem menschlichem Zug.
+  Ungültiges Mshile bekommt eine synthetische Posaune, Mute wird beachtet.
+- 65 Tests lokal und in der vorbereiteten Serverinstallation bestanden;
+  zwölf Chromium-Prüfungen einschliesslich neuer Mehrspielerfunktionen,
+  Ton/Mute, Ergebnissen, Rechnung, Layout und Botplatz-Übernahme.
+- Vier öffentliche Dateien per HTTPS bytegleich. Öffentliche Anmeldung,
+  Botplatz-Übernahme während der Runde und gemeinsame Besa-Ansage mit zwei
+  Testclients erfolgreich; temporärer Testtisch durch Verlassen entfernt.
+- Spieldienst neu gestartet, dadurch laufende Tische beendet. okey, gamebot
+  und caddy aktiv; healthz OK. sudo-Sperre nach beiden Schritten hergestellt.
+- Rückfallinstallation: /opt/okey-before-40d464a. Skripte:
+  /home/debian/prepare-40d464a.sh und /home/debian/activate-40d464a.sh.
