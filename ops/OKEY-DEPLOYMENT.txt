@@ -379,3 +379,28 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   HTTPS-Dateien bytegleich, healthz OK, drei Dienste aktiv, sudo wieder gesperrt.
 - Rückfallkopien: /home/debian/before-14308f5-{index.html,style.css,app.js};
   Installationsskript: /home/debian/install-14308f5.sh.
+
+Mobile Aufteilung und Tischmenü – 31.10.2026 (Europe/Zurich):
+- Vorherigen Produktionsstand in main gesichert: 32f7fe5. Enthält bereits live
+  vorhandene Host-Werkzeuge, Bot-Stufen, Salon-Einstieg, Holztextur und das
+  Steinmenü. Import aller 18 abweichenden Dateien gegen Live-SHA256 geprüft;
+  Zeilenenden im Repository auf LF normalisiert. 81 Spiel-/Servertests bestanden.
+- Release 1bb71ab auf main: leere 44px-Aktionszeile unter dem Brett entfernt;
+  Brett im Hochformat unten, Filz breiter, mehr Höhe und getrennte Abstände.
+- Tischcode bleibt links, Runde steht separat oben rechts. Mehr zeigt Einladung,
+  Pause und Tischzugang; Mitspieler, Telegram und Titel/Spielbericht aufklappbar.
+  Verlassen und Schliessen bleiben erreichbar, während der Menüinhalt scrollt.
+- Verwaiste Gestenbeschreibungen entfernt. Aktionen bleiben in der Tischleiste
+  bzw. im Blitz-Menü. Abwerfen/Mshile bleiben am ausgewählten Stein.
+- Ausführliche Rundentitel im Tischmenü statt zusätzlich auf der Siegesanzeige,
+  damit Ergebnis und nächste Runde auch auf kurzen Bildschirmen Platz haben.
+- 14 Chromium-Browsertests bestanden, darunter 11 Grössen von 320x600 bis
+  1440x900, Hoch-/Querformat, Touch-Verschieben, Steinmenü, Host-/Gastmenü,
+  laufende Menüaktualisierung und Bot-Übernahme per Browser/Telegram-Stub.
+  Syntaxprüfungen bestanden. Kein Test auf einem physischen iPhone.
+- Vier statische Dateien ohne Dienstneustart eingespielt: index.html, app.js,
+  style.css, host-tools.js. Öffentliche HTTPS-Antworten bytegleich zum Release,
+  Healthcheck 200; okey/gamebot/caddy aktiv mit unveränderten Prozess-IDs.
+- Rückfallkopie: /home/debian/before-1bb71ab (root, 0700).
+  Installationsskript prüft vorherige/neue Hashes und stellt bei Fehlern zurück.
+  Remote-Commander-Sudo-Sperre danach vollständig wiederhergestellt.
