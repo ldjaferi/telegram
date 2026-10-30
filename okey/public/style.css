@@ -456,3 +456,10 @@ body .table .seat-top .mini-rack{display:none}
 @media(max-width:600px) and (orientation:portrait){
   body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(320px,1fr) minmax(194px,min(40%,calc(100% - 372px)))}
 }
+
+/* Use the spare rack height for upright tiles on portrait phones. */
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) #rack-tiles{
+    --tile-h:calc(min(var(--tile-w),var(--rack-fit-width,40px))*1.8);
+  }
+}

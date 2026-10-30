@@ -227,7 +227,7 @@ function renderCenter() {
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
   const canDraw = myTurn() && room.phase === 'draw';
-  $('#center').innerHTML = `<div class="piles"><div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">g.</span></button><span>${room.stockCount} STEINE</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div></div><div class="joker-hint">Brustmotiv = <b>Joker</b> · immer frei einsetzbar</div>`;
+  $('#center').innerHTML = `<div class="piles"><div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">g.</span></button><span>${room.stockCount} STEINE</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div></div>`;
 }
 function renderRack() {
   const hand = room ? room.hand : demoHand;
