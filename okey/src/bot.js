@@ -10,8 +10,8 @@ export function botReply(config, message, arena) {
   const id = String(message.from.id), allowed = config.allowPublic || config.allowedIds.includes(id);
   let text, reply_markup;
   if (command === '/id') text = `Deine Telegram-ID: ${id}`;
-  else if (!allowed) text = `Dieser Okey-Tisch ist noch privat. Deine Telegram-ID für die Freischaltung: ${id}`;
-  else if (command === '/help') text = 'Okey mit festen Jokern: Ziehen, abwerfen, 14 Steine zu Reihen, Gruppen oder sieben Paaren ordnen. Mit /nisja geht es an den Tisch. Freie Plätze übernehmen Computer. Brettwerfen gibt die Runde auf – die anderen spielen weiter. Gesten inklusive.';
+  else if (!allowed) text = `Dieser Gjurzi-Tisch ist noch privat. Deine Telegram-ID für die Freischaltung: ${id}`;
+  else if (command === '/help') text = 'Gjurzi mit festen Jokern: Ziehen, abwerfen, 14 Steine zu Reihen, Gruppen oder sieben Paaren ordnen. Mit /nisja geht es an den Tisch. Freie Plätze übernehmen Computer. Brettwerfen gibt die Runde auf – die anderen spielen weiter. Gesten inklusive.';
   else if (['group', 'supergroup'].includes(message.chat.type) && ['/nisja', '/play'].includes(command)) {
     try {
       if (!arena) throw Error('Der Spielserver ist gerade nicht bereit. Bitte versuche es später erneut.');
@@ -26,10 +26,10 @@ export function botReply(config, message, arena) {
   else {
     const code = /^room_([a-f0-9]{6})$/i.exec(parameter || '')?.[1].toUpperCase();
     const url = `${config.publicUrl.replace(/\/$/, '')}/${code ? '?room=' + code : ''}`;
-    text = code ? `Dein Platz an Tisch ${code} wartet. Komm dazu!` : 'OKEY — ABER FRECH.\nSchöne Steine. Schlechte Manieren.\nSpiel mit Freunden oder gegen drei Computergegner.';
+    text = code ? `Dein Platz an Tisch ${code} wartet. Komm dazu!` : 'Gjurzi — ABER FRECH.\nSchöne Steine. Schlechte Manieren.\nSpiel mit Freunden oder gegen drei Computergegner.';
     reply_markup = { inline_keyboard: [[message.chat.type === 'private'
-      ? { text: 'Okey spielen ↗', web_app: { url } }
-      : { text: 'Okey spielen ↗', url: `https://t.me/${config.botUsername}?startapp=${code ? 'room_' + code : 'nisja'}` }]] };
+      ? { text: 'Gjurzi spielen ↗', web_app: { url } }
+      : { text: 'Gjurzi spielen ↗', url: `https://t.me/${config.botUsername}?startapp=${code ? 'room_' + code : 'nisja'}` }]] };
   }
   return { chat_id: message.chat.id, text, ...(reply_markup ? { reply_markup } : {}) };
 }
@@ -41,13 +41,13 @@ export async function configureBot(config, call) {
   const hook = await call('getWebhookInfo', {});
   if (hook.url) throw Error('Ein Webhook ist eingerichtet; Polling wurde nicht gestartet.');
   await call('setMyCommands', { commands: [
-    { command: 'nisja', description: 'Okey spielen — allein oder mit Freunden' },
+    { command: 'nisja', description: 'Gjurzi spielen — allein oder mit Freunden' },
     { command: 'help', description: 'Spielregeln und Bedienung' },
     { command: 'id', description: 'Meine Telegram-ID anzeigen' }
   ] });
-  await call('setChatMenuButton', { menu_button: { type: 'web_app', text: 'Okey spielen', web_app: { url: config.publicUrl.replace(/\/$/, '') + '/' } } });
-  await call('setMyDescription', { description: 'OKEY — aber frech. Okey mit festen Jokern mit Holzbrettern, Comic-Joker und schlechten Manieren. Spiele mit Freunden oder Computergegnern. Wirf Steine ab, verteile Gesten oder gleich das ganze Brett.' });
-  await call('setMyShortDescription', { short_description: 'Okey mit festen Jokern. Holzbretter, freche Gesten und Freunde am Tisch. Jetzt spielen!' });
+  await call('setChatMenuButton', { menu_button: { type: 'web_app', text: 'Gjurzi spielen', web_app: { url: config.publicUrl.replace(/\/$/, '') + '/' } } });
+  await call('setMyDescription', { description: 'Gjurzi — aber frech. Gjurzi mit festen Jokern mit Holzbrettern, Comic-Joker und schlechten Manieren. Spiele mit Freunden oder Computergegnern. Wirf Steine ab, verteile Gesten oder gleich das ganze Brett.' });
+  await call('setMyShortDescription', { short_description: 'Gjurzi mit festen Jokern. Holzbretter, freche Gesten und Freunde am Tisch. Jetzt spielen!' });
 }
 
 export async function runBot(config, signal, arena) {

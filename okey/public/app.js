@@ -208,7 +208,7 @@ function renderSeats() {
     const p = room?.players[seatIndex] || (!room ? { name: ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'][offset - 1], bot: true, count: 14, preview: true } : null);
     const seat = $(`#seat-${position}`);
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
-    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}${room?.mode === 'teams' ? ` · Team ${p.team === 0 ? 'A' : 'B'}` : ''}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="mini-rack" aria-hidden="true">${'<i></i>'.repeat(7)}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+    seat.innerHTML = p ? `<button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
 }
 function renderCenter() {
@@ -227,7 +227,7 @@ function renderCenter() {
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
   const canDraw = myTurn() && room.phase === 'draw';
-  $('#center').innerHTML = `<div class="piles"><div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">o.</span></button><span>${room.stockCount} STEINE</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div></div><div class="joker-hint">Brustmotiv = <b>Joker</b> · immer frei einsetzbar</div>`;
+  $('#center').innerHTML = `<div class="piles"><div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">g.</span></button><span>${room.stockCount} STEINE</span></div><div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div></div><div class="joker-hint">Brustmotiv = <b>Joker</b> · immer frei einsetzbar</div>`;
 }
 function renderRack() {
   const hand = room ? room.hand : demoHand;
@@ -273,9 +273,9 @@ function render() {
   document.body.classList.toggle('in-lobby', room?.status === 'lobby');
   document.body.dataset.stage = room?.status || 'welcome';
   renderSeats(); renderCenter(); renderRack(); syncMusic();
-  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'OKEY · FESTE JOKER <span>•</span> 4 PLÄTZE';
+  $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'Gjurzi · FESTE JOKER <span>•</span> 4 PLÄTZE';
   $('#round-pill').textContent = !room ? 'DEIN LIEBLINGSTISCH IST FREI.' : room.status === 'lobby' ? room.owner === user.id ? 'FREIE PLÄTZE ÜBERNEHMEN COMPUTER.' : 'DER GASTGEBER STARTET DIE RUNDE.' : room.status === 'finished' ? 'DIE NÄCHSTE RUNDE WIRD PERSÖNLICH.' : me()?.out ? 'DU SCHAUST ZU. DIE ANDEREN SPIELEN WEITER.' : myTurn() ? room.phase === 'draw' ? 'DU BIST DRAN · ZIEH EINEN STEIN.' : 'DU BIST DRAN · WIRF EINEN STEIN AB.' : `${room.players[room.turn]?.name.toUpperCase()} IST DRAN.`;
-  $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}${room.mode === 'teams' ? ` · TEAM ${me()?.team === 0 ? 'A' : 'B'}` : ''}` : 'DEIN BRETT'}`;
+  $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}` : 'DEIN BRETT'}`;
   $('#target-label').textContent = target && room?.players.some(p => p.id === target) ? `An ${room.players.find(p => p.id === target).name} · Avatar zum Abwählen` : 'An den ganzen Tisch';
   renderClock();
   $('#scores-button').disabled = !room;
@@ -327,7 +327,6 @@ function showEvent(event) {
   if (event.type === 'throw') {
     sound('throw');
     if (event.player === user.id) $('#rack').classList.add('thrown');
-    for (const seat of document.querySelectorAll('.seat')) if (seat.querySelector(`[data-target="${CSS.escape(event.player)}"]`)) seat.querySelector('.mini-rack')?.classList.add('thrown');
     $('#table-event').innerHTML = `<div class="flying-board">${'<i></i>'.repeat(5)}</div><div class="event-card"><span class="event-emoji">🤬</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'wirfst' : 'wirft'} das Brett.<br>Runde aufgegeben. Würde auch.</span></div>`;
   } else if (event.type === 'bluff') {
     sound('gesture');
