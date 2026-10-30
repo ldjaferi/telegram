@@ -415,3 +415,44 @@ body .table .seat .mini-rack{grid-column:1/-1;grid-row:4;margin:5px auto 0}
 @media(max-width:600px) and (orientation:portrait){
   body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(290px,1fr) minmax(194px,40%)}
 }
+
+/* Public discards face inward; keep names in their own grid cells. */
+body .table .seat-right{grid-template-columns:auto minmax(0,1fr)}
+body .table .seat-right .avatar-button{grid-column:2}
+body .table .seat-right .seat-discard{grid-column:1}
+body .table .seat-top{grid-template-columns:1fr;justify-items:center}
+body .table .seat-top .avatar-button{grid-column:1;grid-row:1}
+body .table .seat-top .seat-discard{grid-column:1;grid-row:4}
+body .table .seat-top .seat-name{grid-column:1;grid-row:2}
+body .table .seat-top .seat-status{grid-column:1;grid-row:3}
+body .table .seat-top .mini-rack{display:none}
+@media(min-width:1001px) and (min-height:541px){
+  body .table .seat .seat-discard{--tile-w:40px;--tile-h:54px}
+  body[data-stage=playing] .table .piles{--tile-w:40px;--tile-h:54px}
+  body[data-stage=playing] .table .pile-button{min-height:54px}
+}
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-template-rows:minmax(98px,1fr) minmax(62px,1fr) 76px 36px 22px;row-gap:2px;padding-top:4px;padding-bottom:4px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-discard{--tile-w:30px;--tile-h:40px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat{row-gap:1px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .piles{--tile-w:32px;--tile-h:42px}
+}
+@media(orientation:landscape) and (max-width:1000px), (orientation:landscape) and (max-height:540px){
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-template-rows:minmax(94px,1fr) minmax(54px,1fr) 65px 36px 24px;row-gap:2px}
+  body .table .seat{row-gap:1px}
+  body .table .seat .seat-discard{--tile-w:28px;--tile-h:38px}
+  body .table .piles{--tile-w:30px;--tile-h:40px}
+}
+@media(min-width:1001px) and (min-height:541px) and (max-height:680px){
+  body .table .seat-top{grid-template-columns:44px minmax(0,1fr);width:165px}
+  body .table .seat-top .avatar-button{grid-column:1;grid-row:1;width:32px;height:32px;font-size:22px}
+  body .table .seat-top .seat-name{grid-column:2;grid-row:1;white-space:normal}
+  body .table .seat-top .seat-status{grid-column:2;grid-row:2}
+  body .table .seat-top .seat-discard{grid-column:1;grid-row:2}
+  body[data-stage=playing] .table .center{bottom:82px}
+  body[data-stage=playing] .table .joker-hint{display:none}
+  .table #table-actions{bottom:30px}
+}
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(320px,1fr) minmax(194px,min(40%,calc(100% - 372px)))}
+}
