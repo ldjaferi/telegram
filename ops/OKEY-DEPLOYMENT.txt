@@ -215,3 +215,11 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   menschliche Aktion schliessen Tische und entfernen sie bei verbundenen Clients.
 - 51 Tests, Syntax und DOM-Integration inklusive Teamwahl/Easter-Egg bestanden.
 - Deployment ausstehend: Remote Commander meldet ov-c992dc offline, zuletzt 26h.
+
+30.10.2026 19:19 UTC — 6fadfaf jetzt live
+- Remote Commander wieder verbunden; Release mit Rückfallkopie installiert.
+- Alle 51 Tests auf VPS bestanden; sudo-Sperre wiederhergestellt.
+- Öffentliche app.js/style.css/egg.svg stimmen mit Release überein.
+- Browser-Gastanmeldung über HTTPS erfolgreich, healthz OK,
+  okey und gamebot aktiv.
+- Rückfallverzeichnis: /opt/okey-before-6fadfaf-20261030T191926Z
