@@ -308,3 +308,31 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
 
 .team-picker{display:grid;grid-template-columns:1fr 1fr;gap:12px}.team-picker section{padding:10px;border:2px solid #d8ad6b;border-radius:10px}.team-picker p{font-size:16px}.team-picker .button{font-size:15px;padding:10px}.table .seat-left,.in-game .table .seat-left{left:2%;right:auto;top:46%;transform:translateY(-50%)}.table .seat-right,.in-game .table .seat-right{right:2%;left:auto;top:46%;transform:translateY(-50%)}.table .seat-top{top:5px;left:50%;transform:translateX(-50%)}
 .in-lobby .table .seat,.in-lobby .tea-prop,.in-lobby .round-pill{display:none}.in-lobby .table{overflow:auto;min-height:390px}.in-lobby .table .center{position:relative;top:auto;left:auto;transform:none;width:100%;max-width:100%;padding:20px 12px}.in-lobby .welcome-buttons{flex-wrap:wrap}.in-lobby .team-picker p{overflow-wrap:anywhere}
+
+/* Portrait phones: reserve separate rows instead of overlapping absolute seats. */
+@media (max-width:600px) and (orientation:portrait){
+  body[data-stage=playing] .shell,body[data-stage=finished] .shell{height:auto;min-height:var(--app-height,100dvh)}
+  body[data-stage=playing] main,body[data-stage=finished] main{height:auto;grid-template-rows:52px auto auto}
+  body[data-stage=playing] .table,body[data-stage=finished] .table{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:86px 100px auto 44px 30px;
+    gap:10px 12px;padding:12px;height:auto;min-height:420px;container-type:normal;align-items:start;
+  }
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat{position:relative;inset:auto;transform:none;width:100%;max-width:150px;justify-self:center}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-top{grid-column:1/-1;grid-row:1}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-left{grid-column:1;grid-row:2}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-right{grid-column:2;grid-row:2}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat .avatar-button{margin:0 auto 4px;width:38px;height:38px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-discard{left:auto;right:0;top:0;transform:none;--tile-w:30px;--tile-h:40px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-name{margin-top:4px;font-size:13px;white-space:normal;line-height:1.15;overflow-wrap:anywhere}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat-status{font-size:11px;margin-top:3px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .center{position:relative;inset:auto;transform:none;grid-column:1/-1;grid-row:3;width:100%;max-width:none}
+  body:is([data-stage=playing],[data-stage=finished]) .table .piles{gap:18px;justify-content:center;--tile-w:34px;--tile-h:45px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .pile-unit>span{font-size:10px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .joker-hint{font-size:11px;margin:8px 0 0}
+  body:is([data-stage=playing],[data-stage=finished]) .table #table-actions{position:relative;inset:auto;grid-column:1/-1;grid-row:4;width:100%;gap:3px}
+  body:is([data-stage=playing],[data-stage=finished]) .table #table-actions button{min-width:0;height:42px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .round-pill{position:relative;inset:auto;transform:none;grid-column:1/-1;grid-row:5;justify-self:center;font-size:11px;margin:0}
+  body:is([data-stage=playing],[data-stage=finished]) .table .shisha-prop{display:none}
+  .table-heading .room-tag{font-size:10px;line-height:1.2}
+  #rack .rack-engraving{display:none}
+}
