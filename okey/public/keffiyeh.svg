@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <pattern id="net" width="32" height="32" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#eee6d1" stroke-width="1.4">
+        <path d="M-16 16 0 0 32 32 48 16M-16 16 0 32 32 0 48 16"/>
+        <path d="M-12 16 0 4 28 32M4 0 32 28 44 16M-12 16 0 28 28 0M4 32 32 4 44 16" stroke-width=".65"/>
+      </g>
+      <path d="m16 12 4 4-4 4-4-4z" fill="#eee6d1"/>
+    </pattern>
+    <pattern id="leaves" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M0 30 32 2" stroke="#eee6d1" fill="none" stroke-width="1.3"/>
+      <path d="M8 23Q-1 21 4 12Q12 14 8 23M16 16Q14 6 23 5Q27 13 16 16M24 9Q16 6 19 0Q29 0 24 9M16 17Q18 26 28 23Q26 15 16 17M0 31Q3 22 10 27Q9 33 0 31" fill="#eee6d1"/>
+    </pattern>
+  </defs>
+  <!-- Original vector motif inspired by the Palestinian keffiyeh's fishing net,
+       olive leaves and woven border; deliberately quiet over the green felt. -->
+  <g opacity=".075">
+    <path fill="url(#net)" d="M0 0h192v146H0z"/>
+    <path fill="url(#leaves)" d="M0 154h192v32H0z"/>
+    <path d="M0 148h192M0 152h192M0 188h192M0 192h192" stroke="#eee6d1" stroke-width="1.5"/>
+  </g>
+</svg>

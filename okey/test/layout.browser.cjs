@@ -147,12 +147,36 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
 
     app.arena.finish(room, room.players[0], 'melds'); await sync(room);
     await page.waitForFunction(() => document.body.dataset.stage === 'finished');
+    assert.match(await page.locator('.result-title').innerText(),/GastgeberMitLangemNamen hat gewonnen/);
+    const quip=await page.locator('.result-quip').innerText();
+    await sync(room);assert.equal(await page.locator('.result-quip').innerText(),quip,'same round keeps its victory line');
     g = await geometry(page); assertViewport(g);
     assert.ok(g.controls.every(c => c.reachable), 'result buttons are visible and reachable');
     assert.equal(g.seats.length, 0, 'result text has a clear area without player previews');
     assertSeparate(g.textAndButtons, 'result text and buttons overlap');
     for (const item of g.textAndButtons) assert.ok(item.x >= g.felt.x && item.right <= g.felt.right && item.y >= g.felt.y && item.bottom <= g.felt.bottom, 'result inside table');
     await capture(page, viewport, 'finished');
+    for (const resultState of ['joker','match','tie']) {
+      room.result.joker=resultState!=='tie';
+      room.matchComplete=resultState!=='joker';room.matchWinners=resultState==='tie'?[0,1]:[1];
+      await sync(room);g=await geometry(page);assertViewport(g);
+      assert.ok(g.controls.every(c=>c.reachable),`${resultState}: buttons reachable`);
+      assertSeparate(g.textAndButtons,`${resultState}: result text and buttons overlap`);
+      for(const item of g.textAndButtons)assert.ok(item.y>=g.felt.y&&item.bottom<=g.felt.bottom,`${resultState}: result inside table`);
+      if(resultState==='joker')assert.match(await page.locator('.result-copy').innerText(),/E mshele me Joker/);
+      if(resultState==='match')assert.match(await page.locator('.result-winners').innerText(),/Kollege mit langem Namen.*Noch ein längerer Spielername/);
+      if(resultState==='tie')assert.equal(await page.locator('.result-quip').count(),0,'tie has no misleading victory line');
+      await capture(page,viewport,resultState);
+    }
+    if(viewport[0]===375){
+      const clip=await page.evaluate(async()=>{
+        const response=await fetch('klack.mp3'),context=new AudioContext();
+        const buffer=await context.decodeAudioData(await response.arrayBuffer());
+        const samples=buffer.getChannelData(0),rms=Math.sqrt(samples.reduce((sum,s)=>sum+s*s,0)/samples.length);
+        await context.close();return {mime:response.headers.get('content-type'),duration:buffer.duration,rms};
+      });
+      assert.equal(clip.mime,'audio/mpeg');assert.ok(clip.duration>.1&&clip.duration<1&&clip.rms>.005,'short spoken clip decodes with audible samples');
+    }
     assert.deepEqual(errors, [], 'no browser errors');
   } catch (error) {
     await capture(page, viewport, 'failure'); throw error;

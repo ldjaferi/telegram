@@ -653,3 +653,23 @@ body[data-stage=finished] .welcome-buttons{flex-wrap:wrap;gap:12px}
 .seat-choices .button{display:grid;gap:6px;text-align:left;white-space:normal;overflow-wrap:anywhere;margin:0;min-height:64px}
 .seat-choices strong{font-size:17px}.seat-choices span{font-size:14px;line-height:1.4;font-weight:normal}
 .seat-choice-actions{display:flex;flex-wrap:wrap;gap:10px}.seat-choice-actions .button{margin:0}
+
+/* Transparent woven motifs stay behind every tile, label and control. */
+body:is([data-stage=welcome],[data-stage=lobby]) .table,
+body:is([data-stage=playing],[data-stage=finished]) .table:before{
+  background-image:url('keffiyeh.svg'),radial-gradient(ellipse,#35684f,#193e34);
+  background-size:192px 192px,100% 100%;background-repeat:repeat,no-repeat;
+  background-origin:padding-box;background-clip:padding-box;
+}
+body[data-stage=finished] .table .center{padding:14px 16px}
+.result-title{font-size:clamp(21px,2.2vw,28px);line-height:1.2;overflow-wrap:anywhere;margin:0 0 8px}
+.result-winners{font-size:15px;font-weight:bold;color:#e3b870;line-height:1.3;overflow-wrap:anywhere;margin:0 0 8px}
+.result-quip{font-size:15px;line-height:1.4;color:#f1ead9;margin:0 0 14px}
+body[data-stage=finished] .result-copy{font-size:13px;line-height:1.35;margin:0 0 12px}
+body[data-stage=finished] .rack-area{grid-template-rows:calc(var(--tile-h)*2 + 32px)}
+body[data-stage=finished] .rack-meta,body[data-stage=finished] .play-actions{display:none}
+@media(orientation:landscape) and (max-width:1000px), (orientation:landscape) and (max-height:720px){
+  body[data-stage=finished] .table{grid-column:1/-1}
+  body[data-stage=finished] .rack-area{display:none}
+  body[data-stage=finished] main>#table-actions{grid-column:1/-1}
+}

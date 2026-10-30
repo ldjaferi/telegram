@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FreeRack } from '../public/rack.js';
+import { FreeRack, newRackContact } from '../public/rack.js';
 function fixture(){
   const previous=globalThis.ResizeObserver;globalThis.ResizeObserver=class{observe(){}};
   const events=[],capture=new Set(),layer={};
@@ -24,4 +24,15 @@ test('touch drag moves after distance threshold without hold; cancellation resto
   const f=fixture();f.rack.down(f.event());f.rack.move(f.event(30,20));f.rack.up(f.event(30,20));
   assert.equal(f.taps,0);assert.equal(f.moves,1);assert.equal(f.selected,'a');assert.ok(f.rack.positions.a.x>.2);
   const before={...f.rack.positions.a};f.rack.down(f.event());f.rack.move(f.event(100,50));f.rack.cancel();assert.deepEqual(f.rack.positions.a,before);assert.equal(f.moves,1);
+});
+
+test('contact feedback only fires for a new neighbour, including a move between rows',()=>{
+  const b={w:200,tw:30};
+  const start={a:{x:0,y:0},b:{x:.7,y:0},c:{x:.3,y:1}};
+  assert.equal(newRackContact(start,{...start,a:{x:.52,y:0}},['a'],b),true);
+  assert.equal(newRackContact(start,{...start,a:{x:.1,y:0}},['a'],b),false);
+  assert.equal(newRackContact(start,{...start,a:{x:.12,y:1}},['a'],b),true);
+  const group={a:{x:0,y:0},b:{x:.165,y:0},c:{x:1,y:1}};
+  assert.equal(newRackContact(group,{...group,a:{x:.2,y:0},b:{x:.365,y:0}},['a','b'],b),false);
+  assert.equal(newRackContact(group,group,['a'],b),false);
 });

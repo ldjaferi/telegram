@@ -6,7 +6,9 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 
 ## Enthalten
 
-- Holzbretter und elfenbeinfarbene Steine, Filztisch, leichte räumliche Tiefe durch CSS. Kein WebGL und keine schwere 3D-Engine.
+- Holzbretter und elfenbeinfarbene Steine, grüner Filztisch mit dezentem palästinensischem Kufiya-Muster (7,5 % Deckkraft), leichte räumliche Tiefe durch CSS. Kein WebGL und keine schwere 3D-Engine. Grafik und Ton werden lokal ausgeliefert; Herkunft steht in `public/ASSET-SOURCES.txt`.
+- Der Rundensieg nennt den Gewinner und im Teammodus das siegreiche Team. Einer von 20 frechen Sprüchen bleibt pro Runde für alle gleich, auch nach Wiederverbindung. Der Gesamtsieg zeigt zusätzlich die Namen der Gewinner; Gleichstand bleibt ausdrücklich als solcher markiert.
+- Neu zusammentreffende Steine auf dem eigenen Brett lösen ein kurzes weiblich gesprochenes „Klack“ aus. Intakte Gruppen bewegen, Auswählen, Sortieren und Formatwechsel bleiben dabei still. Der Ton-Schalter und ein verborgenes Fenster stoppen den Clip; keine überlappenden Stimmen und kein nachträgliches Abspielen.
 - Die zwei Steine mit Comic-Brustmotiv sind dauerhaft Joker. Kein Anzeiger, keine Ersatzsteine; alle 104 Zahlensteine behalten ihren Wert. 106 Steine insgesamt, nach dem Austeilen 49 im Vorrat.
 - Letzter Abwurf je Spieler sichtbar; aufgenommene Abwürfe bleiben als historische Anzeige mit ↗ markiert. Die Mitte zeigt den eigenen Abwurf und separat den aktuell aufnehmbaren Stein.
 - Partien über 5 oder 7 Runden; vor dem Start vom Gastgeber auswählbar. Team A: Plätze 1 und 3, Team B: Plätze 2 und 4. Einzelmodus bleibt verfügbar.
@@ -73,7 +75,7 @@ Computer verwenden eine einfache Kombinationen-Heuristik ohne Einsicht in andere
 
 Tische, Sitzungen und die komplette Punktehistorie leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zehn Minuten; Computeraktionen verlängern diese Frist nicht. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
 
-58 Regel-, Server- und Interaktionstests sowie elf Chromium-Browserprüfungen bestehen lokal. Letztere prüfen Startseite, Warteraum, Spiel, Ergebnis, lange Namen, Touch-Verschieben und Formatwechsel sowie Einladungen, Computerplatzwahl, konkurrierende Übernahmen und Wiederverbindung. Sie kontrollieren Überdeckungen, sichtbare Schaltflächen und die Bretthöhe. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden ebenfalls geprüft. Die Browserprüfung ersetzt keinen Test in Telegram auf echten iOS-/Android-Geräten oder der Audio-Wiedergabe dort.
+60 Regel-, Server- und Interaktionstests sowie elf Chromium-Browserprüfungen bestehen lokal. Letztere prüfen Startseite, Warteraum, Spiel, Ergebnis, lange Namen, Touch-Verschieben und Formatwechsel sowie Einladungen, Computerplatzwahl, konkurrierende Übernahmen und Wiederverbindung. Sie kontrollieren Überdeckungen, sichtbare Schaltflächen und die Bretthöhe. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden ebenfalls geprüft. Die Browserprüfung ersetzt keinen Test in Telegram auf echten iOS-/Android-Geräten oder der Audio-Wiedergabe dort.
 
 ## Tests und Dateien
 

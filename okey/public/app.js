@@ -1,7 +1,7 @@
 import { TEAM_QUESTIONS } from './team-chat.js';
 import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
-import { TableMusic, shishaBubbles } from './music.js';
+import { TableMusic, shishaBubbles, TileClack } from './music.js';
 import { FreeRack } from './rack.js';
 const $ = s => document.querySelector(s);
 const appBase = new URL('.', document.baseURI);
@@ -14,12 +14,38 @@ const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
 const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
 const gestureArt = { finger: '🖕', buj: '🌚', fart: '💨', tea: '☕' };
 const gestureCopy = { finger: 'sendet liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
+const victoryLines = [
+  'Nicht so angeberisch bitte.',
+  'Einmal gewonnen, schon Tischpräsident.',
+  'Jetzt bloss keine Siegerrede.',
+  'Geniesse es. Die Revanche lädt schon.',
+  'Der Çay geht trotzdem auf dich.',
+  'Gut gespielt. Leider müssen wir das zugeben.',
+  'Dein Ego braucht jetzt einen eigenen Stuhl.',
+  'Die Steine waren gut. Die Sprüche kommen noch.',
+  'Bitte lächeln, aber nicht bis morgen.',
+  'Der Tisch hat Glück. Du stehst noch nicht drauf.',
+  'Applaus gibt es nach dem Abwasch.',
+  'Du darfst grinsen. Kurz.',
+  'Heute Champion, morgen wieder Ausreden.',
+  'Die anderen haben dich nur warmspielen lassen.',
+  'Kein Grund, gleich Autogramme zu verteilen.',
+  'Ein Sieg macht noch keine Statue.',
+  'Du gewinnst die Runde. Wir behalten den Humor.',
+  'Bitte bleib für normale Menschen erreichbar.',
+  'Der Pokal ist leider gerade in der Spülmaschine.',
+  'So. Und jetzt wieder bescheiden sitzen.'
+];
+function victoryLine(){
+  const seed=(parseInt(room.code,16)||0)+(room.matchNumber||1)*7+room.round*13;
+  return victoryLines[seed%victoryLines.length];
+}
 let room = null, user = null, socket = null, config = null, selected = null, order = [], target = null, lastEvent = 0, roomCode = null, connected = false, reconnectTimer, toastTimer, eventTimer, serverOffset = 0;
 let lastTeamVersion = '', teamMessageTimer;
 let newTileId = null, newTileKey = '', newTileTimer, jokerTimer;
-let muted = localStorage.getItem('okey-muted') === 'true', audio, music;
+let muted = localStorage.getItem('okey-muted') === 'true', audio, music, tileClack;
 let audioUnlocked = false, suppressClickUntil = 0;
-const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); } });
+const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); if(move?.contact&&!muted&&!document.hidden)tileClack?.play(); } });
 for(const button of [...document.querySelectorAll('.gestures button'), $('#bluff'), $('#shisha'), $('#throw')]) $('#table-actions').append(button);
 $('#bluff').setAttribute('aria-label','Joker-Bluff'); $('#shisha').setAttribute('aria-label','Fester Zug'); $('#throw').setAttribute('aria-label','Brett werfen und Runde aufgeben');
 let token = sessionStorage.getItem('okey-token') || '';
@@ -68,11 +94,11 @@ function syncMusic(){
 }
 function unlockAudio(){
   if(muted || (audioUnlocked && audio?.state === 'running'))return;
-  try{audio ||= new (window.AudioContext || window.webkitAudioContext)();audio.resume().then(()=>{audioUnlocked=true;syncMusic()}).catch(()=>{});}catch{}
+  try{audio ||= new (window.AudioContext || window.webkitAudioContext)();tileClack ||= new TileClack(audio,apiUrl('/klack.mp3'),()=>!muted&&!document.hidden);audio.resume().then(()=>{audioUnlocked=true;syncMusic()}).catch(()=>{});}catch{}
 }
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('keydown',unlockAudio);
-document.addEventListener('visibilitychange',()=>{syncMusic();if(document.hidden)stopBubbles?.()});
+document.addEventListener('visibilitychange',()=>{syncMusic();if(document.hidden){stopBubbles?.();tileClack?.stop()}});
 function sound(kind = 'tile') {
   if (muted || document.hidden) return;
   try {
@@ -91,7 +117,7 @@ function sound(kind = 'tile') {
   } catch { /* Muted devices can still play the game. */ }
 }
 function updateSound() { $('#sound').innerHTML = muted ? '♫<span class="sound-slash">/</span>' : '♫'; $('#sound').title = muted ? 'Musik und Ton einschalten' : 'Musik und Ton ausschalten'; $('#sound').setAttribute('aria-label', $('#sound').title); }
-$('#sound').onclick = () => { muted = !muted; localStorage.setItem('okey-muted', String(muted)); updateSound(); if(muted)stopBubbles?.(); else unlockAudio(); syncMusic(); sound(); }; updateSound();
+$('#sound').onclick = () => { muted = !muted; localStorage.setItem('okey-muted', String(muted)); updateSound(); if(muted){stopBubbles?.();tileClack?.stop()} else unlockAudio(); syncMusic(); sound(); }; updateSound();
 
 function tileMarkup(tile, interactive = false) {
   const wild = tile.joker === true, v = tile;
@@ -225,7 +251,13 @@ function renderCenter() {
   }
   if (room.status === 'finished') {
     const result = room.result;
-    $('#center').innerHTML = `<p class="result-title">${room.matchComplete ? matchTitle() : result.winner ? 'Ke fituar. Ani mos u lazdro.' : 'Alle Steine weg.'}</p><p class="result-copy">${result.kind === 'last' ? 'Die letzte verbliebene Seite gewinnt.' : result.kind === 'pairs' ? 'Sieben Paare. Doppelt frech.' : result.kind === 'stock' ? 'Vorrat leer. Restpunkte zählen für alle.' : result.joker ? 'E mshele me Joker. Bravo i ke gjek.' : ''}</p><div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    const score=room.scores.at(-1),names=score?.names||room.players.map(p=>p.name);
+    const finalNames=room.matchComplete&&room.matchWinners.length===1?names.filter((_,seat)=>room.mode==='teams'?seat%2===room.matchWinners[0]:seat===room.matchWinners[0]).join(' & '):'';
+    const title=room.matchComplete?matchTitle():result.winner?`${esc(result.name)} hat gewonnen.`:'Alle Steine weg.';
+    const team=!room.matchComplete&&result.winner&&room.mode==='teams'?`Team ${score?.winner===0?'A':'B'}`:'';
+    const detail=result.joker?'E mshele me Joker. Bravo i ke gjek.':result.kind==='pairs'?'Sieben Paare. Doppelt frech.':result.kind==='stock'?'Vorrat leer. Restpunkte zählen für alle.':'';
+    const celebrate=room.matchComplete?room.matchWinners.length===1:Boolean(result.winner);
+    $('#center').innerHTML = `<p class="result-title">${title}</p>${finalNames||team?`<p class="result-winners">${esc(finalNames||team)}</p>`:''}${celebrate?`<p class="result-quip">${esc(victoryLine())}</p>`:''}${detail?`<p class="result-copy">${esc(detail)}</p>`:''}<div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
     return;
   }
   const mine=room.players.findIndex(p=>p.id===user.id);

@@ -1,3 +1,24 @@
+// A local spoken clip: one voice at a time, no backlog after mute or a hidden tab.
+export class TileClack {
+  constructor(context,url,enabled){
+    this.context=context;this.enabled=enabled;this.generation=0;this.lastAt=-Infinity;
+    this.buffer=fetch(url).then(r=>{if(!r.ok)throw Error('Audio unavailable');return r.arrayBuffer()})
+      .then(data=>context.decodeAudioData(data)).catch(()=>null);
+  }
+  async play(){
+    if(!this.enabled()||this.source||this.pending)return;
+    const generation=this.generation,requested=performance.now();this.pending=true;
+    const buffer=await this.buffer;this.pending=false;
+    if(!buffer||generation!==this.generation||!this.enabled()||performance.now()-requested>300||this.context.state!=='running'||this.context.currentTime-this.lastAt<.25)return;
+    const source=this.context.createBufferSource(),gain=this.context.createGain();
+    source.buffer=buffer;gain.gain.value=.65;source.connect(gain);gain.connect(this.context.destination);
+    this.source=source;this.lastAt=this.context.currentTime;
+    source.onended=()=>{source.disconnect();gain.disconnect();if(this.source===source)this.source=null;};
+    source.start();
+  }
+  stop(){this.generation++;if(this.source){try{this.source.stop()}catch{}}}
+}
+
 // Original, quiet Hijaz-inspired plucked melody with a soft hand-drum pulse.
 export class TableMusic {
   constructor(context){this.context=context;this.bus=context.createGain();this.bus.gain.value=0;this.bus.connect(context.destination);this.timer=null;this.step=0;}

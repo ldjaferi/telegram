@@ -24,6 +24,15 @@ const rowOf=p=>p.y<.5?0:1;
 const capacity=b=>Math.max(1,Math.floor((b.w+b.tw+GAP)/(b.tw+GAP)));
 const tileMap=hand=>new Map(hand.map(t=>[t.id,t]));
 
+// Only a newly formed contact with another tile makes a sound. Moving an
+// intact group, selecting, sorting, resizing and cancelling stay silent.
+export function newRackContact(before,after,movingIds,b){
+  const moving=new Set(movingIds),limit=b.tw+SEPARATION+1;
+  const touching=(a,c)=>a&&c&&rowOf(a)===rowOf(c)&&Math.abs(a.x-c.x)*b.w<=limit;
+  return movingIds.some(id=>Object.keys(after).some(other=>!moving.has(other)&&
+    touching(after[id],after[other])&&!touching(before[id],before[other])));
+}
+
 export function rackBundles(hand,positions,b){
   const byId=tileMap(hand), found=[];
   for(let row=0;row<2;row++){
@@ -127,7 +136,8 @@ export class FreeRack {
       const id=this.selected();if(!id||!this.positions[id])return;
       const b=this.bounds(),r=this.layer.getBoundingClientRect();
       const result=dropRack(this.hand,this.positions,[id],{x:clamp((e.clientX-r.left-b.tw/2)/b.w),y:clamp((e.clientY-r.top-b.th/2)/b.h)},b);
-      this.positions=result.positions;this.save();this.place();this.onMove(id);
+      const contact=newRackContact(this.positions,result.positions,[id],b);
+      this.positions=result.positions;this.save();this.place();this.onMove(id,{contact});
     });
     new ResizeObserver(()=>{if(this.drag)this.cancel();this.place()}).observe(root);
   }
@@ -172,13 +182,14 @@ export class FreeRack {
   up(e){
     const d=this.drag;if(!d||d.pointer!==e.pointerId)return;this.drag=null;d.el.classList.remove('dragging');
     if(this.root.hasPointerCapture(e.pointerId))this.root.releasePointerCapture(e.pointerId);this.skipClick=performance.now()+400;
-    if(d.active){if(d.preview)this.positions=d.preview.positions;this.save();this.onMove(d.id,{group:d.ids.length>1});this.render(this.hand,this.interactive)}else this.onSelect(d.id);
+    if(d.active){const contact=d.preview&&newRackContact(this.positions,d.preview.positions,d.ids,this.bounds());if(d.preview)this.positions=d.preview.positions;this.save();this.onMove(d.id,{group:d.ids.length>1,contact:Boolean(contact)});this.render(this.hand,this.interactive)}else this.onSelect(d.id);
   }
   cancel(){const d=this.drag;if(!d)return;this.drag=null;d.el.classList.remove('dragging');if(this.root.hasPointerCapture(d.pointer))this.root.releasePointerCapture(d.pointer);this.render(this.hand,this.interactive)}
   keyMove(e){
     const el=e.target.closest('[data-tile]');if(!el||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
     e.preventDefault();const b=this.bounds(),p=this.positions[el.dataset.tile],step=e.shiftKey?4:18;
     const result=dropRack(this.hand,this.positions,[el.dataset.tile],{x:clamp(p.x+(e.key==='ArrowRight'?step:e.key==='ArrowLeft'?-step:0)/b.w),y:e.key==='ArrowDown'?1:e.key==='ArrowUp'?0:p.y},b);
-    this.positions=result.positions;this.place();this.onMove(el.dataset.tile);
+    const contact=newRackContact(this.positions,result.positions,[el.dataset.tile],b);
+    this.positions=result.positions;this.place();this.onMove(el.dataset.tile,{contact});
   }
 }

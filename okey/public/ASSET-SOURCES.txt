@@ -1,0 +1,14 @@
+keffiyeh.svg
+  Original vector artwork for Gjurzi, inspired by the fishing-net, olive-leaf
+  and woven-border motifs of a Palestinian keffiyeh. Transparent marks only;
+  the green felt comes from CSS. No external image dependency.
+
+klack.mp3
+  Locally synthesized German female voice saying "Klack!" (no runtime TTS).
+  Model: Piper de_DE-kerstin-low, via sherpa-onnx's tts-models release:
+  https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-de_DE-kerstin-low.tar.bz2
+  Model card: German, one speaker, 16 kHz; dataset license CC0.
+  Dataset: https://github.com/rhasspy/dataset-voice-kerstin
+  Generated with sherpa-onnx OfflineTts (CPU), speed 1.05, phonemes klˈak!.
+  Silence trimmed at -45 dB; limited to 0.8; MP3 mono 24 kHz, 64 kbps.
+  Only the tiny generated clip is shipped, not the model or synthesis runtime.
