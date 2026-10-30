@@ -74,7 +74,7 @@ test('setup verifies bot identity and never deletes an existing webhook', async 
   const calls = []; const call = async (method, payload) => { calls.push([method, payload]); return method === 'getMe' ? { username: config.botUsername } : method === 'getWebhookInfo' ? { url: '' } : true; };
   await configureBot({ ...config }, call);
   assert.equal(calls.find(([m]) => m === 'setChatMenuButton')[1].menu_button.web_app.url, 'https://example.test/okey/');
-  assert.deepEqual(calls.find(([m]) => m === 'setMyCommands')[1].commands.map(c => c.command), ['nisja', 'help', 'id']);
+  assert.deepEqual(calls.find(([m]) => m === 'setMyCommands')[1].commands.map(c => c.command), ['nisja', 'help', 'id','wo','buj','revanche','spielabend','titel','bericht','ruhe','reden','sperren','entsperren','stop']);
   await assert.rejects(configureBot({ ...config }, async m => m === 'getMe' ? { username: 'other_bot' } : {}), /Identität/);
   await assert.rejects(configureBot({ ...config }, async m => m === 'getMe' ? { username: config.botUsername } : { url: 'https://example.test/hook' }), /Webhook/);
 });

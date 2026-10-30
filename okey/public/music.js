@@ -1,22 +1,44 @@
-// A local spoken clip: one voice at a time, no backlog after mute or a hidden tab.
+// Two dry tile impacts: bright Klick, lower Klack. Generated once, no download.
+function contactBuffer(context, low) {
+  const rate = context.sampleRate, duration = low ? .085 : .055;
+  const buffer = context.createBuffer(1, Math.ceil(rate * duration), rate);
+  const data = buffer.getChannelData(0);
+  const tones = low ? [1050, 1830, 2960, 4430] : [2180, 3590, 5270, 7130];
+  let seed = low ? 173 : 97, peak = 0, previousNoise = 0;
+  for (let i = 0; i < data.length; i++) {
+    const t = i / rate;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const noise = seed / 2147483648 - 1;
+    const transient = (noise - previousNoise) * .32 * Math.exp(-t / .0025);
+    previousNoise = noise;
+    let body = 0;
+    for (let j = 0; j < tones.length; j++) {
+      const frequency = Math.min(tones[j], rate * .44);
+      body += Math.sin(2 * Math.PI * frequency * t) * Math.exp(-t / ((low ? .012 : .007) / (1 + j * .45))) / (j + 1);
+    }
+    const attack = Math.min(1, t / .0007), tail = Math.min(1, (duration - t) / .008);
+    data[i] = (transient + body * .34) * attack * tail;
+    peak = Math.max(peak, Math.abs(data[i]));
+  }
+  if (peak) for (let i = 0; i < data.length; i++) data[i] *= .72 / peak;
+  return buffer;
+}
 export class TileClack {
-  constructor(context,url,enabled){
-    this.context=context;this.enabled=enabled;this.generation=0;this.lastAt=-Infinity;
-    this.buffer=fetch(url).then(r=>{if(!r.ok)throw Error('Audio unavailable');return r.arrayBuffer()})
-      .then(data=>context.decodeAudioData(data)).catch(()=>null);
+  constructor(context, _legacyUrl, enabled) {
+    this.context = context; this.enabled = enabled; this.lastAt = -Infinity;
+    this.next = 0; this.buffers = [contactBuffer(context, false), contactBuffer(context, true)];
   }
-  async play(){
-    if(!this.enabled()||this.source||this.pending)return;
-    const generation=this.generation,requested=performance.now();this.pending=true;
-    const buffer=await this.buffer;this.pending=false;
-    if(!buffer||generation!==this.generation||!this.enabled()||performance.now()-requested>300||this.context.state!=='running'||this.context.currentTime-this.lastAt<.25)return;
-    const source=this.context.createBufferSource(),gain=this.context.createGain();
-    source.buffer=buffer;gain.gain.value=.65;source.connect(gain);gain.connect(this.context.destination);
-    this.source=source;this.lastAt=this.context.currentTime;
-    source.onended=()=>{source.disconnect();gain.disconnect();if(this.source===source)this.source=null;};
+  play() {
+    const c = this.context;
+    if (!this.enabled() || c.state !== 'running' || this.source || c.currentTime - this.lastAt < .10) return;
+    const source = c.createBufferSource(), gain = c.createGain();
+    source.buffer = this.buffers[this.next]; gain.gain.value = .55;
+    source.connect(gain); gain.connect(c.destination);
+    source.onended = () => { source.disconnect(); gain.disconnect(); if (this.source === source) this.source = null; };
     source.start();
+    this.source = source; this.lastAt = c.currentTime; this.next = 1 - this.next;
   }
-  stop(){this.generation++;if(this.source){try{this.source.stop()}catch{}}}
+  stop() { if (this.source) { const source = this.source; this.source = null; try { source.stop(); } catch {} } }
 }
 
 // Original, quiet Hijaz-inspired plucked melody with a soft hand-drum pulse.

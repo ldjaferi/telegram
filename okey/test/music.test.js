@@ -7,22 +7,32 @@ test('music schedules bounded voices, avoids duplicate loops, and fades on mute'
   const music=new TableMusic(context);try{music.start();const timer=music.timer;music.start();assert.equal(timer,music.timer);assert.ok(music.bus.gain.value<=.05);for(let i=0;i<64;i++)music.note(i,i*.32);for(const n of nodes.filter(n=>'starts'in n))assert.ok(n.stops>n.starts&&n.stops-n.starts<2);music.stop();assert.equal(music.timer,null);assert.equal(music.bus.gain.value,0);}finally{music.stop()}
 });
 
-test('spoken contact clip does not overlap, queue after mute, or play while hidden',async()=>{
-  const original=globalThis.fetch;let resolveAudio;
-  globalThis.fetch=async()=>({ok:true,arrayBuffer:()=>new Promise(resolve=>{resolveAudio=resolve})});
-  const sources=[];let enabled=true;
-  const context={currentTime:1,state:'running',destination:{},decodeAudioData:async()=>({duration:.5}),
-    createGain:()=>({gain:{},connect(){},disconnect(){}}),
-    createBufferSource(){const s={connect(){},disconnect(){},start(){this.started=true},stop(){this.stopped=true;this.onended()}};sources.push(s);return s;}};
-  try{
-    const clip=new TileClack(context,'/klack.mp3',()=>enabled);
-    await Promise.resolve();const pending=clip.play();clip.stop();resolveAudio(new ArrayBuffer(1));await pending;
-    assert.equal(sources.length,0,'muting cancels a pending load');
-    await clip.play();await clip.play();assert.equal(sources.length,1);
-    enabled=false;clip.stop();assert.equal(sources[0].stopped,true);
-    context.currentTime+=1;await clip.play();assert.equal(sources.length,1);
-    enabled=true;await clip.play();assert.equal(sources.length,2);clip.stop();
-  }finally{globalThis.fetch=original;}
+test('contacts alternate Klick/Klack; ignored, muted and suspended contacts do not advance', () => {
+  const sources = []; let enabled = true;
+  const context = { sampleRate: 44100, currentTime: 1, state: 'running', destination: {},
+    createBuffer(channels, length, rate) { const data = new Float32Array(length); return { duration: length / rate, getChannelData: () => data }; },
+    createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
+    createBufferSource() { const source = { connect() {}, disconnect() {}, start() {}, stop() { this.stopped = true; this.onended(); } }; sources.push(source); return source; }
+  };
+  const clip = new TileClack(context, '/unused.mp3', () => enabled);
+  clip.play(); clip.play(); assert.equal(sources.length, 1, 'overlapping contacts are ignored');
+  const klick = sources[0].buffer; sources[0].onended();
+  context.currentTime += .06; clip.play(); assert.equal(sources.length, 1, 'contact burst is bounded');
+  enabled = false; context.currentTime += 1; clip.play(); assert.equal(sources.length, 1);
+  enabled = true; context.state = 'suspended'; clip.play(); assert.equal(sources.length, 1);
+  context.state = 'running'; clip.play(); const klack = sources[1].buffer;
+  assert.notEqual(klick, klack); assert.ok(klick.duration < klack.duration);
+  clip.stop(); assert.equal(sources[1].stopped, true);
+  context.currentTime += 1; clip.play(); assert.equal(sources[2].buffer, klick);
+  sources[2].onended(); context.currentTime += 1; clip.play(); assert.equal(sources[3].buffer, klack);
+  for (const sound of [klick, klack]) {
+    const data = sound.getChannelData(0);
+    assert.ok(sound.duration < .1);
+    assert.equal(Math.abs(data[0]), 0);
+    assert.ok(Math.abs(data.at(-1)) < .001, 'clean tail without a cut-off click');
+    const peak = Math.max(...data.map(Math.abs)); assert.ok(peak > .1 && peak <= .73, 'audible without clipping');
+    assert.ok(data.every(Number.isFinite));
+  }
 });
 
 import { shishaBubbles } from '../public/music.js';

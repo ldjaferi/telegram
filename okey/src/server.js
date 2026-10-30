@@ -3,11 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Arena } from './game.js';
+import { SocialHub } from './social.js';
 import { Sessions, validateTelegram } from './auth.js';
 
 const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/team-chat.js', 'team-chat.js'], ['/style.css', 'style.css'], ['/egg.svg', 'egg.svg'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
 assets.set('/keffiyeh.svg','keffiyeh.svg'); assets.set('/klack.mp3','klack.mp3');
-assets.set('/table-fun.js','table-fun.js');
+assets.set('/table-fun.js','table-fun.js'); assets.set('/host-tools.js','host-tools.js');
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml', mp3: 'audio/mpeg' };
 export function createApplication(config = {}) {
   config = { host: '127.0.0.1', port: 3200, dev: true, publicUrl: 'http://127.0.0.1:3200', allowedIds: [], allowPublic: false, ...config };
@@ -16,7 +17,9 @@ export function createApplication(config = {}) {
   const publicAddress = new URL(config.publicUrl), prefix = publicAddress.pathname.replace(/\/$/, '');
   if (!/^\/[a-zA-Z0-9/_-]*$/.test(prefix || '/')) throw Error('Ungültiger Anwendungspfad.');
   const route = path => !prefix ? path : path.startsWith(prefix + '/') ? path.slice(prefix.length) : null;
-  const arena = new Arena(), sessions = new Sessions(), sockets = new Map(), limits = new Map();
+  let social;
+  const arena = new Arena({onFinish:r=>social.finish(r)}), sessions = new Sessions(), sockets = new Map(), limits = new Map();
+  social = new SocialHub(arena,config);
   const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
   function rate(key, max, ms) {
     let entry = limits.get(key);
@@ -72,6 +75,11 @@ export function createApplication(config = {}) {
       }
       const session = sessions.get(req.headers.authorization?.replace(/^Bearer /, ''));
       if (!session) return json(res, 401, { error: 'Bitte erneut anmelden.' });
+      if (path === '/api/social') {
+        rate(`social:${session.user.id}`,20,60000);
+        if(data.action==='view') return json(res,200,social.view(session.user.id));
+        return json(res,200,await social.perform(session.user.id,data.action,data.target));
+      }
       if (path === '/api/ticket') return json(res, 200, { ticket: sessions.ticket(session), user: session.user });
       return json(res, 404, { error: 'Nicht gefunden.' });
     } catch (error) { return json(res, 400, { error: error instanceof SyntaxError ? 'Ungültige Anfrage.' : error.message }); }
@@ -97,16 +105,24 @@ export function createApplication(config = {}) {
           const m = JSON.parse(raw.toString());
           if (m.type === 'create') {
             if (m.solo === true && ![5, 7].includes(m.roundLimit)) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen.');
-            arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
+            arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit, botLevel: m.botLevel });
           }
           else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase(), m.botId);
           else if (m.type === 'choose-team') arena.chooseTeam(user.id, m.team);
-          else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit });
+          else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit, botLevel: m.botLevel });
           else if (m.type === 'new-match') arena.newMatch(user.id);
           else if (m.type === 'start') {
             const r = arena.roomFor(user.id);
             if (r?.owner === user.id && r.round === 0 && !r.roundLimitChosen) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen oder lade das Spiel neu.');
             arena.start(user.id);
+          }
+          else if (m.type === 'host') {
+            const r=arena.hostAction(user.id,m.action,m.target);
+            if(m.action==='remove') {
+              const removed=sockets.get(m.target);
+              if(removed?.readyState===WebSocket.OPEN) { removed.send(JSON.stringify({type:'state',room:null})); removed.send(JSON.stringify({type:'notice',message:'Der Gastgeber hat dich für diese Partie vom Tisch entfernt.'})); }
+            }
+            broadcast(r);return;
           }
           else if (m.type === 'draw') arena.draw(user.id, m.source);
           else if (m.type === 'discard') arena.discard(user.id, m.tileId, m.claim === true);
@@ -138,8 +154,8 @@ export function createApplication(config = {}) {
     for (const ws of sockets.values()) { if (!ws.alive || ws.session.expires < Date.now()) ws.terminate(); else { ws.alive = false; ws.ping(); } }
   }, 15000);
   return {
-    server, arena, config,
+    server, arena, social, config,
     async listen() { await new Promise((resolve, reject) => { server.once('error', reject); server.listen(config.port, config.host, resolve); }); return server.address(); },
-    async close() { clearInterval(ticker); clearInterval(maintenance); for (const ws of wss.clients) ws.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
+    async close() { await social.saving.catch(()=>{}); clearInterval(ticker); clearInterval(maintenance); for (const ws of wss.clients) ws.terminate(); await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => server.close(resolve)); }
   };
 }

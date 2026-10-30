@@ -1,3 +1,28 @@
+import { installHostTools } from './host-tools.js';
+const botLevelLabels = { fmi: 'Si fmi', bur: 'Si bur', baba: 'Si Baba' };
+const bujLines = [
+  "Ihr sind alles Opfer und chömed i dhölll",
+  "Ich gang uf sBoot. I nim keine mit",
+  "dBrocki hät gad 50% Rabatt",
+  "Ich chum grad. Muess nur no churz is Brocki.",
+  "Für euch hät sBoot leider kei Platz.",
+  "50 Prozent Rabatt. Ich han trotzdem verhandlet.",
+  "Ich ha kei Joker. Ich ha Beziehige.",
+  "Spieled wiiter. Ich lueg schnell uf Ricardo.",
+  "Wer verlürt, zahlt sBenzin fürs Boot.",
+  "Ihr chönd mit ufs Boot. Aber schwümme müend ihr sälber.",
+  "Ich gib eine us. Aber mir teiled sGlas.",
+  "De Çay isch gratis. S’heisse Wasser choschtet.",
+  "Ich bi nöd geizig. Ihr sind eifach z’tüür.",
+  "Chömed ruhig verbii. Ich bi denn nöd dihei.",
+  "Ich gönn eu alles. Solang ich’s nöd zahle.",
+  "dBrocki hät 50 Prozent. Ich frag, öb no öppis gaht.",
+  "Ich ha eu öppis mitbracht. D’Quittig, zum Teile.",
+  "Ihr sind mini beschte Fründe. Aber fasst mini Snacks nöd aa.",
+  "Ich lade eu zum Znacht ii. Ässed vorher no öppis.",
+  "Wer gwünnt, zahlt de Çay. Ich verlür us Prinzip.",
+  "Ich vermiss eu scho. Aber bliibed no chli det."
+];
 import { TEAM_QUESTIONS } from './team-chat.js';
 import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
@@ -13,7 +38,8 @@ const colors = ['Rot', 'Gelb', 'Blau', 'Schwarz'];
 const tableNames = ['Te Besniku', 'Te Blerimi', 'Te Agroni', 'Te Iliri', 'Te Arbeni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ardiani', 'Te Gëzimi', 'Te Fatosi', 'Te Petriti', 'Te Flamuri', 'Te Burimi', 'Te Albani', 'Te Taulanti'];
 const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
 const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
-const gestureArt = { finger: '🖕', buj: '🌚', tea: '☕' };
+const cayArt = '<svg class="cay-glass" viewBox="0 0 100 120" aria-hidden="true" focusable="false"><ellipse cx="50" cy="106" rx="44" ry="10" fill="#f4ead9" stroke="#ad8042" stroke-width="2"/><ellipse cx="50" cy="106" rx="31" ry="5" fill="none" stroke="#c54738" stroke-width="2"/><path d="M27 23Q24 41 33 61Q39 75 29 95Q50 104 71 95Q61 75 67 61Q76 41 73 23Z" fill="#dceef2" fill-opacity=".65" stroke="#668b94" stroke-width="2.5"/><path d="M29 43Q30 50 36 63Q41 77 33 92Q50 99 67 92Q59 77 64 63Q70 50 71 43Z" fill="#a63c12"/><ellipse cx="50" cy="43" rx="21" ry="5" fill="#d87a1e"/><ellipse cx="50" cy="23" rx="23" ry="5" fill="#e5f3f2" fill-opacity=".8" stroke="#668b94" stroke-width="2"/><path d="M33 29Q31 41 40 62M40 70Q42 79 38 89" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/><path d="M43 15Q36 9 43 3M59 15Q52 9 59 3" fill="none" stroke="#bcb6aa" stroke-width="2" stroke-linecap="round"/></svg>';
+const gestureArt = { finger: '🖕', buj: '🌚', tea: cayArt };
 const gestureCopy = { finger: 'sendet liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', tea: 'gibt einen Çay aus' };
 const juiceArt = '<svg class="juice-glass" viewBox="0 -8 64 80" aria-hidden="true" focusable="false"><path d="M12 13h40l-5 49q-1 5-7 5H24q-6 0-7-5z" fill="#eaf3e9" stroke="#fef9e5" stroke-width="3"/><path d="M16 29h32l-4 32q0 2-4 2H24q-4 0-4-2z" fill="#e5a931"/><ellipse cx="32" cy="29" rx="16" ry="4" fill="#f5cb57"/><path d="m22 22 3 32" stroke="#fff6d0" stroke-width="3" stroke-linecap="round"/><path d="M41 17c-13-11-9-23-1-16 8-7 17 3 9 12l-8 8z" fill="#d65140" stroke="#83352a" stroke-width="1.5"/><path d="M41 4q-1-6 5-7" fill="none" stroke="#695333" stroke-width="2"/><path d="M42 3q4-9 13-1-8 5-13 1" fill="#609657"/></svg>';
 const victoryLines = [
@@ -51,7 +77,60 @@ const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => 
 for(const button of [...document.querySelectorAll('.gestures button'), $('#bluff'), $('#shisha'), $('#fun-button')]) $('#table-actions').append(button);
 // Keep the existing wire ID so active rooms can receive the replacement action without a restart.
 $('[data-gesture="fart"] span').innerHTML = juiceArt;
+$('[data-gesture="tea"] span').innerHTML = cayArt;
 $('#bluff').setAttribute('aria-label','Joker-Bluff'); $('#shisha').setAttribute('aria-label','Fester Zug');
+// TILE-ACTIONS-TRIAL: reuse existing buttons and game handlers.
+const tileActions = document.createElement('div');
+tileActions.id = 'tile-action-popover';
+tileActions.setAttribute('role', 'group');
+tileActions.setAttribute('aria-label', 'Aktionen für den ausgewählten Stein');
+tileActions.hidden = true;
+tileActions.append($('#discard'), $('#claim'));
+const dismissTileAction = document.createElement('button');
+dismissTileAction.type = 'button';
+dismissTileAction.className = 'tile-action-dismiss';
+dismissTileAction.setAttribute('aria-label', 'Steinauswahl aufheben');
+dismissTileAction.title = 'Schliessen, ohne einen Stein abzuwerfen';
+dismissTileAction.textContent = '×';
+dismissTileAction.onclick = () => dismissTileActions(true);
+tileActions.append(dismissTileAction);
+function dismissTileActions(restoreFocus = false) {
+  const previous = selected;
+  selected = null;
+  renderRack();
+  if (restoreFocus) [...document.querySelectorAll('#rack-tiles [data-tile]')].find(el => el.dataset.tile === previous)?.focus({ preventScroll: true });
+}
+// Capture before the rack's click-to-place handler: an outside tap dismisses.
+document.addEventListener('pointerdown', event => {
+  if (!selected || event.target.closest('#tile-action-popover, #rack-tiles [data-tile]')) return;
+  dismissTileActions();
+}, true);
+document.body.append(tileActions);
+$('#play-actions').classList.add('tile-actions-placeholder');
+function positionTileActions() {
+  const tile = [...document.querySelectorAll('#rack-tiles [data-tile]')].find(el => el.dataset.tile === selected);
+  if (!tile || !connected || room?.status !== 'playing' || me()?.out || freeRack.drag) { tileActions.hidden = true; return; }
+  tileActions.hidden = false;
+  const rect = tile.getBoundingClientRect(), menu = tileActions.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
+  const width = viewport?.width || innerWidth;
+  const height = viewport?.height || innerHeight;
+  tileActions.style.left = Math.max(left + 8, Math.min(rect.left + rect.width / 2 - menu.width / 2, left + width - menu.width - 8)) + 'px';
+  tileActions.style.top = Math.max(top + 8, Math.min(rect.top - menu.height - 10, top + height - menu.height - 8)) + 'px';
+}
+let tileActionFrame;
+function scheduleTileActions() { cancelAnimationFrame(tileActionFrame); tileActionFrame = requestAnimationFrame(positionTileActions); }
+window.addEventListener('resize', scheduleTileActions);
+window.addEventListener('scroll', scheduleTileActions, true);
+window.visualViewport?.addEventListener('resize', scheduleTileActions);
+window.visualViewport?.addEventListener('scroll', scheduleTileActions);
+new ResizeObserver(scheduleTileActions).observe($('#rack'));
+$('#rack').addEventListener('pointerdown', () => { tileActions.hidden = true; }, true);
+$('#rack').addEventListener('pointercancel', scheduleTileActions);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tileActions.hidden) { selected = null; renderRack(); } });
+// END TILE-ACTIONS-TRIAL
+
 let token = sessionStorage.getItem('okey-token') || '';
 let smokeTimer, stopBubbles;
 const telegram = window.Telegram?.WebApp;
@@ -62,7 +141,12 @@ function fitViewport() {
 window.addEventListener('resize', fitViewport);
 window.visualViewport?.addEventListener('resize', fitViewport);
 fitViewport();
-$('#tools-button').onclick = () => { $('#tools-content').append($('#table-tools')); $('#tools-dialog').showModal(); };
+const inviteMenu = document.createElement('section');
+inviteMenu.className = 'invite-menu';
+inviteMenu.hidden = true;
+inviteMenu.innerHTML = '<strong>Freund an den Tisch holen</strong><p>Einladungslink kopieren und deinem Freund schicken.</p><button class="button primary" data-action="invite">Einladungslink kopieren ↗</button>';
+$('#tools-content').prepend(inviteMenu);
+$('#tools-button').onclick = () => { inviteMenu.hidden = !room; $('#tools-content').append($('#table-tools')); $('#tools-dialog').showModal(); };
 $('#close-tools').onclick = () => $('#tools-dialog').close();
 $('#tools-dialog').addEventListener('close', () => { document.querySelector('main').append($('#table-tools')); $('#tools-button').focus(); });
 $('#fun-button').onclick = () => { $('#fun-dialog').showModal(); $('#fun-button').setAttribute('aria-expanded', 'true'); };
@@ -91,8 +175,10 @@ const demoHand = [
   ...[1, 2, 3].map(number => ({ id: `d3-${number}`, color: 3, number }))
 ];
 const me = () => room?.players.find(p => p.id === user?.id);
-const myTurn = () => connected && room?.status === 'playing' && !me()?.out && room.players[room.turn]?.id === user?.id;
+const myTurn = () => connected && !room?.paused && room?.status === 'playing' && !me()?.out && room.players[room.turn]?.id === user?.id;
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 3800); }
+const renderHostTools = installHostTools({getRoom:()=>room,getUser:()=>user,now:()=>Date.now()+serverOffset,send,post,modal,toast,esc});
+const funBlocked = () => room?.paused || (me()?.gesturesMutedUntil || 0) > Date.now()+serverOffset;
 function modal(html) { $('#modal-content').dataset.view = ''; delete $('#modal-content').dataset.messageId; $('#modal-content').innerHTML = html; if (!$('#modal').open) $('#modal').showModal(); }
 $('#close-modal').onclick = () => $('#modal').close();
 $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) { const r = $('#modal').getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $('#modal').close(); } });
@@ -200,7 +286,7 @@ async function connect() {
     if (!token) {
       if (!config.dev && !config.guestAccess && !telegram?.initData) throw Error('Öffne dieses Spiel über den Telegram-Bot.');
       let guestName = '';
-      if (!telegram?.initData && !config.dev) guestName = await new Promise(resolve => { modal('<h2>Willkommen am Tisch!</h2><form id=guest-form><label for=guest-name>Wie heisst du?</label><input id=guest-name maxlength=24 required autocomplete=nickname><button class=button type=submit>Hajde bojrum →</button></form>'); $('#guest-form').onsubmit = e => { e.preventDefault(); const name = $('#guest-name').value.trim(); if(name){ $('#modal').close(); resolve(name); } }; });
+      if (!telegram?.initData && !config.dev) guestName = await new Promise(resolve => { modal('<div class=salon-emblem aria-hidden=true>✧</div><p class=salon-kicker>DER GJURZI SALON</p><h2>Willkommen am Tisch!</h2><form id=guest-form><label for=guest-name>Wie heisst du?</label><input id=guest-name maxlength=24 required autocomplete=nickname><button class="button primary" type=submit>Hajde bojrum →</button></form>'); $('#guest-form').onsubmit = e => { e.preventDefault(); const name = $('#guest-name').value.trim(); if(name){ $('#modal').close(); resolve(name); } }; });
       const login = await post('/api/login', { initData: telegram?.initData || '', name: guestName || new URLSearchParams(location.search).get('name') || 'Gast' });
       token = login.token; user = login.user; sessionStorage.setItem('okey-token', token);
     }
@@ -209,6 +295,7 @@ async function connect() {
     socket = new WebSocket(socketUrl);
     socket.onmessage = e => {
       const message = JSON.parse(e.data);
+      if (message.type === 'notice') {toast(message.message);return;}
       if (message.type === 'seat-options') { showSeatChoices(message); return; }
       if (message.type === 'error') {
         if (message.code === 'invalid_claim') {
@@ -263,16 +350,16 @@ function renderSeats() {
     const seat = $(`#seat-${position}`);
     seat.hidden = !room;
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
-    seat.innerHTML = p ? `<div class="player-info"><button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div></div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+    seat.innerHTML = p ? `<div class="player-info"><button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? (botLevelLabels[room?.botLevel] || 'Si bur') + ' · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div></div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
 }
 function renderCenter() {
   if (!room) {
-    $('#center').innerHTML = '<p class="welcome-title">Na, traust du dich?</p><p class="welcome-sub">Der Çay ist heiss.<br>Deine Gegner auch ein bisschen.</p><div class="welcome-buttons"><button class="button primary" data-action="solo">Alleine mit Computern ↗</button><button class="button secondary" data-action="create">Mit Freunden</button></div><div class="center-links"><button class="text-button" data-action="join-dialog">Tischcode eingeben →</button></div>';
+    $('#center').innerHTML = '<div class="salon-emblem" aria-hidden="true">✧</div><p class="salon-kicker">WILLKOMMEN IM GJURZI SALON</p><p class="welcome-title">Hajde, bojrum.</p><p class="welcome-sub">Der Çay ist heiss. Die Steine liegen bereit.<br>Nimm Platz – mit Freunden oder unseren Bots.</p><div class="welcome-buttons"><button class="button primary" data-action="solo">Alleine mit Computern ↗</button><button class="button secondary" data-action="create">Mit Freunden</button></div><div class="center-links"><button class="text-button" data-action="join-dialog">Tischcode eingeben →</button></div>';
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<div class="lobby-intro"><p class="welcome-title">${esc(tableName(room.code))}</p>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p></div><div class="lobby-teams">${teamChoiceMarkup()}</div><div class="welcome-buttons lobby-actions"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    $('#center').innerHTML = `<div class="lobby-intro"><p class="salon-kicker">EUER TISCH IST BEREIT</p><p class="welcome-title">${esc(tableName(room.code))}</p><div class="salon-code-card"><span class="salon-code-label">DEIN TISCHCODE</span><strong class="salon-code" aria-label="Tischcode ${room.code}">${room.code}</strong><button class="button secondary" data-action="copy-code">Code kopieren</button><p>Teile den Code mit deinen Freunden.<br>Sie wählen „Tischcode eingeben“.</p></div>${room.owner === user.id ? '<button class="button primary" data-action="settings">Partie einstellen & starten →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p></div><div class="lobby-teams">${teamChoiceMarkup()}</div><div class="welcome-buttons lobby-actions"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {
@@ -284,13 +371,14 @@ function renderCenter() {
     const detail=room.matchComplete?(result.winner?`Letzte Runde gewonnen: ${result.name}${result.joker?' · Joker-Abschluss':''}.`:'Letzte Runde: Vorrat leer.'):result.joker?'E mshele me Joker. Bravo i ke gjek.':result.kind==='pairs'?'Sieben Paare. Doppelt frech.':result.kind==='stock'?'Vorrat leer. Restpunkte zählen für alle.':'';
     const celebrate=room.matchComplete?room.matchWinners.length===1:Boolean(result.winner);
     $('#center').innerHTML = `<p class="result-title">${title}</p>${finalNames||team?`<p class="result-winners">${esc(finalNames||team)}</p>`:''}${celebrate?`<p class="result-quip">${esc(victoryLine())}</p>`:''}${detail?`<p class="result-copy">${esc(detail)}</p>`:''}<div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    if(room.awards?.length) $('#center').insertAdjacentHTML('beforeend',`<div class="round-awards">${room.awards.map(x=>`<p>${esc(x)}</p>`).join('')}</div>${room.socialReport?'<button class="button secondary" data-social="report">Partie-Bericht ansehen</button>':''}`);
     $('#center').insertAdjacentHTML('beforeend', `<div class="result-fun"><button class="button secondary" data-action="tea-bill">☕ Çay-Rechnung</button>${canMakeExcuse(room, room.players.findIndex(p => p.id === user.id)) ? '<button class="button secondary" data-gesture="excuse">🙄 Ausrede finden</button>' : ''}</div><p class="tea-caption">${esc(teaBill(room)?.caption || '')}</p>`);
     return;
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
   const canDraw = myTurn() && room.phase === 'draw';
   $('#center').innerHTML = `<div class="piles">
-    <div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div>
+    <div class="pile-unit"><button class="pile-button" data-action="draw-discard" ${canDraw && room.availableDiscard ? '' : 'disabled'} title="Letzten abgeworfenen Stein nehmen">${canDraw && room.availableDiscard ? tileMarkup(room.availableDiscard) : '<span class="empty-tile">·</span>'}</button><span>NEHMEN</span></div>
     <div class="pile-unit"><button class="pile-button" data-action="draw-stock" ${canDraw ? '' : 'disabled'} title="Verdeckten Stein ziehen"><span class="tile-back">g.</span></button><span>${room.stockCount} STEINE</span></div>
     <div class="pile-unit own-discard">${discardMarkup(mine,'Du')}<span>DEIN ABWURF</span></div>
   </div>`;
@@ -310,25 +398,26 @@ function renderRack() {
 function renderActions() {
   const canDiscard = myTurn() && room.phase === 'discard' && Boolean(selected);
   $('#discard').disabled = !canDiscard; $('#claim').disabled = !canDiscard;
-  $('#throw').disabled = !connected || room?.status !== 'playing' || me()?.out;
+  positionTileActions(); scheduleTileActions();
+  $('#throw').disabled = !connected || room?.paused || room?.status !== 'playing' || me()?.out;
   $('#fun-button').disabled = !connected || !room;
   $('#leave').hidden = !room;
   $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Mshile“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
-  for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room;
-  $('[data-gesture=besa]').disabled = !connected || room?.status !== 'playing' || me()?.out;
+  for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room || funBlocked();
+  $('[data-gesture=besa]').disabled = !connected || funBlocked() || room?.status !== 'playing' || me()?.out;
   renderBluff();
   renderShisha();
 }
 function renderShisha() {
   const seconds = Math.max(0, Math.ceil(((room?.shishaReadyAt || 0) - Date.now() - serverOffset) / 1000));
-  const active = connected && room?.status === 'playing' && !me()?.out;
+  const active = connected && !funBlocked() && room?.status === 'playing' && !me()?.out;
   $('#shisha').disabled = !active || seconds > 0;
   const hint = !room || room.status !== 'playing' ? 'Drei Sekunden Rauch für den ganzen Tisch.' : me()?.out ? 'Du schaust zu. Die Shisha wartet auf die nächste Runde.' : seconds ? `Erst wieder klare Sicht … noch ${seconds}s.` : 'Einmal kräftig ziehen. Alle sitzen drei Sekunden im Nebel.';
   $('#shisha-hint').textContent = hint; $('#shisha').title = hint;
 }
 function renderBluff() {
   const seconds = Math.max(0, Math.ceil(((room?.bluffReadyAt || 0) - Date.now() - serverOffset) / 1000));
-  const eligible = connected && room?.canBluff;
+  const eligible = connected && !funBlocked() && room?.canBluff;
   $('#bluff').disabled = !eligible || seconds > 0;
   const hint = !room || room.status !== 'playing' ? 'Mit Joker: eine Ansage an den ganzen Tisch.'
     : me()?.out ? 'Du schaust zu. Bluffen geht erst wieder nächste Runde.'
@@ -340,7 +429,8 @@ function render() {
   document.body.classList.toggle('in-game', Boolean(room));
   document.body.classList.toggle('in-lobby', room?.status === 'lobby');
   document.body.dataset.stage = room?.status || 'welcome';
-  renderSeats(); renderCenter(); renderRack(); syncMusic();
+  renderSeats(); renderCenter(); renderRack(); syncMusic(); renderHostTools();
+  if(room?.paused) clearSmoke();
   $('#room-tag').innerHTML = room ? `<strong class="table-name">${esc(tableName(room.code))}</strong><div>CODE ${room.code} <span>•</span> RUNDE ${room.round || '–'} / ${room.roundLimit}</div>` : 'Gjurzi · FESTE JOKER <span>•</span> 4 PLÄTZE';
   $('#round-pill').textContent = !room ? 'DEIN LIEBLINGSTISCH IST FREI.' : room.status === 'lobby' ? room.owner === user.id ? 'FREIE PLÄTZE ÜBERNEHMEN COMPUTER.' : 'DER GASTGEBER STARTET DIE RUNDE.' : room.status === 'finished' ? 'DIE NÄCHSTE RUNDE WIRD PERSÖNLICH.' : me()?.out ? 'DU SCHAUST ZU. DIE ANDEREN SPIELEN WEITER.' : myTurn() ? room.phase === 'draw' ? 'DU BIST DRAN · ZIEH EINEN STEIN.' : 'DU BIST DRAN · WIRF EINEN STEIN AB.' : `${room.players[room.turn]?.name.toUpperCase()} IST DRAN.`;
   $('#player-label').innerHTML = `<span class="small-dot"></span> ${room ? `${esc(user.name === 'Du' ? 'DEIN BRETT' : user.name.toUpperCase())} · ${room.hand.length}` : 'DEIN BRETT'}`;
@@ -350,8 +440,10 @@ function render() {
   if ($('#modal').open && $('#modal-content').dataset.view === 'scores') showScores();
 }
 function renderClock() {
+  for(const b of document.querySelectorAll('[data-gesture]')) b.disabled=!connected || !room || funBlocked() || (b.dataset.gesture==='besa' && (room?.status!=='playing' || me()?.out));
   renderBluff();
   renderShisha();
+  if (room?.paused) {$('#turn-label').textContent=`Çay-Pause · ${Math.ceil(room.pauseRemaining/1000)}s Zugzeit bleiben`;return;}
   if (room?.status === 'playing') {
     const seconds = Math.max(0, Math.ceil((room.deadline - Date.now() - serverOffset) / 1000));
     $('#turn-label').innerHTML = myTurn() ? `Du bist dran · ${room.phase === 'draw' ? 'Ziehen' : 'Abwerfen'} · <span class="timer">${seconds}s</span>` : me()?.out ? 'Brett weg. Trotzdem dabei.' : `${esc(room.players[room.turn]?.name)} · ${seconds}s`;
@@ -383,6 +475,7 @@ function showSmoke(event) {
 }
 
 function showEvent(event) {
+  if(event.type==='host-action') { const labels={pause:'Çay-Pause. Spiel und Timer halten an.',resume:'Weiter geht’s!',lock:'Der Tisch ist jetzt gesperrt.',unlock:'Der Tisch ist wieder offen.',transfer:'Die Tischleitung wurde übergeben.',quiet:'Gestenpause für 5 Minuten.',unquiet:'Gesten wieder freigegeben.',remove:'Ein Mitspieler wurde vom Tisch entfernt.','reports-on':'Gruppenberichte eingeschaltet.','reports-off':'Gruppenberichte ausgeschaltet.'};toast(labels[event.action]||'Tisch aktualisiert.');return; }
   if (event.type === 'thinker') { toast(`⌛ ${event.name}: Planst du deinen Zug oder deine Pension?`); return; }
   if (event.type === 'seat-taken') { toast(`${event.name} übernimmt den Platz von ${event.previousName}.`); return; }
   if (event.type === 'puff') { showPuff(event); return; }
@@ -416,7 +509,7 @@ function showEvent(event) {
       return;
     }
     if (event.gesture === 'buj') {
-      $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">Ihr sind alles Opfer und chömed i dhölll</span><small>${esc(event.name)}</small></div>`;
+      $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">${esc(bujLines[Number(event.seq || 0) % bujLines.length])}</span><small>${esc(event.name)}</small></div>`;
       eventTimer = setTimeout(() => { $('#table-event').replaceChildren(); }, 4500);
       return;
     }
@@ -441,6 +534,8 @@ function showWinningHand(){
 }
 
 async function invite() {
+  if (!room) return;
+  $('#tools-dialog').close();
   const link = config.botUsername && telegram?.initData ? `https://t.me/${config.botUsername}?startapp=room_${room.code}` : `${appBase.href}?room=${room.code}`;
   try { await navigator.clipboard.writeText(link); toast(`${tableName(room.code)}: Einladung kopiert. Tischcode: ${room.code}`); }
   catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
@@ -480,6 +575,10 @@ document.addEventListener('click', e => {
   else if (action === 'scores') showScores();
   else if (action === 'draw-stock') send('draw', { source: 'stock' });
   else if (action === 'draw-discard') send('draw', { source: 'discard' });
+  else if (action === 'copy-code' && room) {
+    navigator.clipboard?.writeText(room.code).then(() => toast('Tischcode kopiert.'), () => toast('Markiere den Tischcode zum Kopieren.'));
+    if (!navigator.clipboard) toast('Markiere den Tischcode zum Kopieren.');
+  }
   else if (action === 'invite') invite();
   else if (action === 'join-dialog') {
     modal('<p class="eyebrow">DEIN PLATZ WARTET SCHON</p><h2>Ab an den Tisch.</h2><form id="join-form"><label for="join-code">Tischcode von deinen Freunden</label><input id="join-code" name="code" placeholder="A1B2C3" maxlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off"><button class="button primary" type="submit">Dazusetzen →</button></form>');
@@ -537,13 +636,14 @@ function showScores() {
 $('#scores-button').onclick = showScores;
 function setupTable(solo, existing = false) {
   const selectedMode = existing ? room.mode : solo ? 'individual' : 'teams';
-  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><fieldset class="round-options"><legend>Wie viele Runden spielt ihr?</legend><label><input type="radio" name="rounds" value="5" required><span><strong>5</strong> Runden</span></label><label><input type="radio" name="rounds" value="7" required><span><strong>7</strong> Runden</span></label></fieldset><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Warte auf deine Kollegen. Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
+  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><label for="bot-level">Wie stark spielen die Bots?</label><select id="bot-level"><option value="fmi">Si fmi · wie ein Kind</option><option value="bur">Si bur · guter Spieler</option><option value="baba">Si Baba · stärkste Stufe</option></select><p class="bot-level-note">Gilt für alle Bots, auch deinen Teampartner. Alle spielen mit verdeckten Händen.</p><fieldset class="round-options"><legend>Wie viele Runden spielt ihr?</legend><label><input type="radio" name="rounds" value="5" required><span><strong>5</strong> Runden</span></label><label><input type="radio" name="rounds" value="7" required><span><strong>7</strong> Runden</span></label></fieldset><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Warte auf deine Kollegen. Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
   $('#match-mode').value = selectedMode;
+  $('#bot-level').value = existing ? room.botLevel || 'bur' : 'bur';
   if (existing && room.roundLimitChosen) $(`#match-form input[value="${room.roundLimit}"]`).checked = true;
   $('#match-form').onsubmit = event => {
     event.preventDefault();
     if (!$('#match-form').reportValidity()) return;
-    const options = { mode: $('#match-mode').value, roundLimit: Number($('#match-form input[name=rounds]:checked').value) };
+    const options = { botLevel: $('#bot-level').value, mode: $('#match-mode').value, roundLimit: Number($('#match-form input[name=rounds]:checked').value) };
     if (existing) { send('configure', options); send('start'); } else send('create', { solo, ...options });
     $('#modal').close();
   };

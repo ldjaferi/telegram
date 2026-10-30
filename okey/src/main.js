@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { createApplication } from './server.js';
 import { runBot } from './bot.js';
 
@@ -10,12 +10,14 @@ const app = createApplication({
   botToken: process.env.CREDENTIALS_DIRECTORY ? readFileSync(join(process.env.CREDENTIALS_DIRECTORY, 'bot-token'), 'utf8').trim() : process.env.BOT_TOKEN || '',
   botUsername: process.env.BOT_USERNAME || '',
   botOffsetPath: process.env.BOT_OFFSET_PATH || 'data/bot-offset',
+  socialPath: join(dirname(process.env.BOT_OFFSET_PATH || 'data/bot-offset'),'social.json'),
   allowedIds: (process.env.ALLOWED_TELEGRAM_IDS || '').split(',').map(s => s.trim()).filter(Boolean),
   allowPublic: process.env.ALLOW_PUBLIC_PLAY === 'true'
 });
+await app.social.load();
 await app.listen(); console.log(`OKEY, ABER FRECH. ${app.config.publicUrl}`);
 const controller = new AbortController();
-const botTask = app.config.botToken ? runBot(app.config, controller.signal, app.arena).catch(error => {
+const botTask = app.config.botToken ? runBot(app.config, controller.signal, app.arena, app.social).catch(error => {
   if (!controller.signal.aborted) { console.error(error.message); process.exitCode = 1; controller.abort(); return app.close(); }
 }) : Promise.resolve();
 let stopping = false;

@@ -1,3 +1,4 @@
+import { BOT_LEVELS, analyseHand, chooseDiscard } from './bot-strategy.js';
 import { randomInt, randomBytes } from 'node:crypto';
 import { TEAM_QUESTIONS, TEAM_MESSAGE_MS } from '../public/team-chat.js';
 import { bestCombinations } from '../public/combinations.js';
@@ -82,7 +83,7 @@ export function botDiscard(hand) {
 }
 
 export class Arena {
-  constructor({ now = () => Date.now(), turnMs = 120000 } = {}) { this.rooms = new Map(); this.now = now; this.turnMs = turnMs; }
+  constructor({ now = () => Date.now(), turnMs = 120000, onFinish = () => {} } = {}) { this.onFinish = onFinish; this.rooms = new Map(); this.now = now; this.turnMs = turnMs; }
   roomFor(id) { return [...this.rooms.values()].find(r => r.players.some(p => p.id === id)); }
   groupTable(user, chatId) {
     const group = String(chatId);
@@ -97,11 +98,12 @@ export class Arena {
   player(user, bot = false) { return { id: user.id, name: user.name, bot, hand: [], out: false, wins: 0, connected: true, lastGesture: -Infinity }; }
   create(user, solo = false, options = {}) {
     if (this.roomFor(user.id)) throw Error('Verlasse zuerst deinen aktuellen Tisch.');
-    if (this.rooms.size >= 100) throw Error('Alle Tische sind belegt.');
+    if (this.rooms.size >= 10) throw Error('Alle Tische sind belegt.');
     let code; do { code = randomBytes(3).toString('hex').toUpperCase(); } while (this.rooms.has(code));
-    const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5;
+    const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5, botLevel = options.botLevel ?? 'bur';
+    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur oder Si Baba.');
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
-    const r = { mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, humanActivity: this.now(), touched: this.now() };
+    const r = { botLevel, mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, humanActivity: this.now(), touched: this.now() };
     this.rooms.set(code, r);
     if (solo) this.start(user.id);
     return r;
@@ -117,6 +119,8 @@ export class Arena {
     if (old) throw Error('Verlasse zuerst deinen aktuellen Tisch.');
     const r = this.rooms.get(code);
     if (!r) throw Error('Diesen Tisch gibt es nicht mehr.');
+    if (r.locked) throw Error('Der Gastgeber hat den Tisch für neue Spieler gesperrt.');
+    if (r.removed?.includes(user.id)) throw Error('Du wurdest für diese Partie vom Tisch entfernt.');
     const choose = message => { throw Object.assign(Error(message), { code: 'choose_seat', choices: this.seatChoices(r) }); };
     let vacant = r.players.findIndex(p => p.bot);
     if (r.round > 0 || botId !== undefined) {
@@ -130,7 +134,7 @@ export class Arena {
       const previous = r.players[vacant];
       r.players[vacant] = { ...previous, id: user.id, name: user.name, bot: false, connected: true };
       if (r.teamMessages) delete r.teamMessages[vacant % 2];
-      if (r.status === 'playing' && r.turn === vacant) this.deadline(r);
+      if (r.status === 'playing' && r.turn === vacant && !r.pause) this.deadline(r);
       this.event(r, 'seat-taken', { player: user.id, name: user.name, previousName: previous.name });
     } else r.players.push(this.player(user));
     r.humanActivity = this.now(); r.touched = this.now(); return r;
@@ -146,18 +150,63 @@ export class Arena {
     [r.players[from],r.players[to]] = [r.players[to],r.players[from]];
   }
   event(r, type, data = {}) { r.events.push({ seq: ++r.seq, type, at: this.now(), ...data }); r.events = r.events.slice(-20); r.touched = this.now(); }
+  requireHost(id) {
+    const r = this.roomFor(id);
+    if (!r || r.owner !== id) throw Error('Nur der Gastgeber darf das.');
+    return r;
+  }
+  hostAction(id, action, target) {
+    const r = this.requireHost(id);
+    if (action === 'lock' || action === 'unlock') r.locked = action === 'lock';
+    else if (action === 'reports-on' || action === 'reports-off') r.reportsEnabled = action === 'reports-on';
+    else if (action === 'pause') {
+      if (r.status !== 'playing' || r.pause) throw Error('Die Runde kann gerade nicht pausiert werden.');
+      const now = this.now();
+      r.pause = { remaining: Math.max(0, r.deadline-now), botRemaining: Math.max(0,r.botAt-now), puffRemaining: Math.max(0,r.nextPuffAt-now) };
+    } else if (action === 'resume') {
+      if (!r.pause) throw Error('Die Runde ist nicht pausiert.');
+      r.deadline=this.now()+r.pause.remaining; r.botAt=this.now()+r.pause.botRemaining; r.nextPuffAt=this.now()+r.pause.puffRemaining; r.pause=null;
+    } else {
+      const p = r.players.find(p => p.id === target && !p.bot);
+      if (!p || p.id === id) throw Error('Wähle einen anderen menschlichen Mitspieler.');
+      if (action === 'transfer') r.owner = p.id;
+      else if (action === 'quiet') p.gesturesMutedUntil = this.now()+300000;
+      else if (action === 'unquiet') p.gesturesMutedUntil = 0;
+      else if (action === 'remove') {
+        if ((r.removed?.length || 0) >= 128) throw Error('Bitte diese Partie zuerst beenden.');
+        (r.removed ||= []).push(p.id);
+        const seat=r.players.indexOf(p);
+        if (r.teamMessages) delete r.teamMessages[seat%2];
+        if (!r.round) r.players.splice(seat,1);
+        else r.players[seat]={...p,id:`bot-${randomBytes(6).toString('hex')}`,name:'Ersatz-Baba',bot:true,connected:false,gesturesMutedUntil:0};
+      } else throw Error('Unbekannte Host-Aktion.');
+    }
+    this.event(r,'host-action',{action,player:id,target:target || null});
+    r.humanActivity=this.now();
+    return r;
+  }
+  requireFun(r,p) {
+    if (r?.pause) throw Error('Der Tisch macht gerade Çay-Pause.');
+    if (p?.gesturesMutedUntil > this.now()) throw Error('Deine Spassaktionen pausieren gerade. Mitspielen kannst du weiter.');
+  }
+  funCount(r,p,key) {
+    r.funStats ||= {};
+    const row=r.funStats[p.id] ||= {name:p.name,tea:0,throws:0};
+    row[key]++;
+  }
   configure(id, options = {}) {
     const r = this.roomFor(id);
     if (!r || r.owner !== id || r.round !== 0) throw Error('Nur der Gastgeber kann vor der Partie die Regeln ändern.');
-    const mode = options.mode ?? r.mode, roundLimit = options.roundLimit ?? r.roundLimit;
+    const mode = options.mode ?? r.mode, roundLimit = options.roundLimit ?? r.roundLimit, botLevel = options.botLevel ?? r.botLevel ?? 'bur';
+    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur oder Si Baba.');
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
-    r.mode = mode; r.roundLimit = roundLimit; if (options.roundLimit !== undefined) r.roundLimitChosen = true; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
+    r.botLevel = botLevel; r.mode = mode; r.roundLimit = roundLimit; if (options.roundLimit !== undefined) r.roundLimitChosen = true; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
   }
   newMatch(id) {
     const r = this.roomFor(id);
     if (!r || r.owner !== id || !r.matchComplete) throw Error('Erst die aktuelle Partie beenden.');
     r.round = 0; r.scores = []; r.totals.fill(0); r.matchComplete = false; r.matchWinners = [];
-    r.roundLimitChosen = false; r.matchNumber++; r.status = 'lobby'; r.result = null;
+    r.roundLimitChosen = false; r.matchNumber++; r.funStats={}; r.removed=[]; r.socialReport=null; r.awards=[]; r.status = 'lobby'; r.result = null;
     for (const p of r.players) { p.hand = []; p.out = false; p.lastDraw = null; }
     this.event(r, 'new-match');
   }
@@ -167,7 +216,7 @@ export class Arena {
     while (r.players.length < 4) { const i = r.players.length - 1; r.players.push(this.player({ id: `bot-${r.code}-${i}`, name: BOT_NAMES[i] }, true)); }
     const tiles = deck();
     for (let i = tiles.length - 1; i > 0; i--) { const j = randomInt(i + 1); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
-    r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.winningHand = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
+    r.pause=null; r.publicPickups = []; r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.winningHand = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
     r.shishaReadyAt = 0; r.nextPuffAt = this.now() + 14000 + randomInt(10000);
     for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
@@ -175,7 +224,7 @@ export class Arena {
   deadline(r) { r.deadline = this.now() + this.turnMs; r.botAt = this.now() + 1400; r.thinkerShown = false; }
   requireTurn(id, phase) {
     const r = this.roomFor(id); const p = r?.players.find(p => p.id === id);
-    if (!r || r.status !== 'playing' || p.out || r.players[r.turn].id !== id || r.phase !== phase) throw Error('Du bist damit noch nicht dran.');
+    if (!r || r.pause || r.status !== 'playing' || p.out || r.players[r.turn].id !== id || r.phase !== phase) throw Error('Du bist damit noch nicht dran.');
     return [r, p];
   }
   draw(id, source) {
@@ -185,6 +234,8 @@ export class Arena {
     if (source === 'discard') {
       if (!r.lastDiscard || !r.discards[r.lastDiscard.seat].length) throw Error('Hier liegt kein Stein.');
       tile = r.discards[r.lastDiscard.seat].pop();
+      (r.publicPickups ||= []).push({ seat: r.turn, tile });
+      if (r.publicPickups.length > 106) r.publicPickups.shift();
       if (r.lastDiscards[r.lastDiscard.seat]) r.lastDiscards[r.lastDiscard.seat].taken = true;
       r.lastDiscard = null;
     } else {
@@ -213,7 +264,7 @@ export class Arena {
   }
   finish(r, player, kind, joker = false) {
     if (r.status !== 'playing') return;
-    r.status = 'finished'; r.result = { winner: player?.id || null, name: player?.name || null, kind, joker };
+    r.pause=null; r.status = 'finished'; r.result = { winner: player?.id || null, name: player?.name || null, kind, joker };
     r.winningHand = player && kind !== 'last' ? [...player.hand] : null;
     if (player) player.wins++;
     const winnerSeat = player ? r.players.indexOf(player) : -1;
@@ -226,17 +277,18 @@ export class Arena {
       return value;
     });
     if (winner >= 0 && joker) points[winner] = -10;
-    r.scores.push({ round: r.round, points, penalties, winner, joker, kind, names: r.players.map(p => p.name) });
+    r.scores.push({ round: r.round, points, penalties, winner, joker, kind, names: r.players.map(p => p.name), ids:r.players.map(p=>p.id), bots:r.players.map(p=>p.bot) });
     r.totals = r.totals.map((n, i) => n + points[i]);
     r.matchComplete = r.round >= r.roundLimit;
     if (r.matchComplete) r.matchWinners = r.totals.flatMap((n, i) => n === Math.min(...r.totals) ? [i] : []);
     this.event(r, 'finish', { player: player?.id, joker });
+    this.onFinish(r);
   }
   surrender(id) {
     const r = this.roomFor(id); const p = r?.players.find(p => p.id === id);
-    if (!r || r.status !== 'playing' || p.out) throw Error('Du bist nicht in einer laufenden Runde.');
+    if (!r || r.pause || r.status !== 'playing' || p.out) throw Error('Du bist nicht in einer laufenden Runde oder die Runde pausiert.');
     if (r.teamMessages) delete r.teamMessages[r.players.indexOf(p) % 2];
-    p.out = true; this.event(r, 'throw', { player: id, name: p.name });
+    this.funCount(r,p,'throws'); p.out = true; this.event(r, 'throw', { player: id, name: p.name });
     if (this.onlyOneSide(r)) this.finish(r, r.players.find(p => !p.out), 'last');
     else if (r.players[r.turn].id === id) this.next(r);
     return r;
@@ -277,18 +329,21 @@ export class Arena {
   gesture(id, gesture, target) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
     if (!r || !GESTURES.includes(gesture)) throw Error('Unbekannte Geste.');
+    this.requireFun(r,p);
     if (gesture === 'besa' && (r.status !== 'playing' || p.out)) throw Error('Besa gibt es während deiner laufenden Runde.');
     if (gesture === 'excuse' && !canMakeExcuse(r, r.players.indexOf(p))) throw Error('Ausreden gibt es nach einer Niederlage.');
     if (gesture === 'besa' || gesture === 'excuse') target = null;
     if (target && (!r.players.some(p => p.id === target) || target === id)) throw Error('Wähle einen Mitspieler.');
     if (this.now() - p.lastGesture < 2500) throw Error('Erst mal Luft holen.');
     const lines = gesture === 'excuse' ? excuseLines(r.mode) : null;
+    if (gesture==='tea') this.funCount(r,p,'tea');
     p.lastGesture = this.now(); this.event(r, 'gesture', { player: id, name: p.name, gesture, target: target || null,
       ...(lines ? { line: lines[randomInt(lines.length)] } : {}) });
   }
   bluff(id) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
     if (!r || r.status !== 'playing' || p.out) throw Error('Joker-Bluff geht nur während deiner laufenden Runde.');
+    this.requireFun(r,p);
     if (!p.hand.some(tile => isWild(tile))) throw Error('Für den Joker-Bluff brauchst du einen Joker auf deinem Brett.');
     if (this.now() < (p.lastBluff ?? -Infinity) + BLUFF_COOLDOWN_MS || this.now() - p.lastGesture < 2500) throw Error('Brust raus. Kurz durchatmen. Gleich kannst du wieder bluffen.');
     p.lastBluff = this.now(); p.lastGesture = this.now();
@@ -297,6 +352,7 @@ export class Arena {
   shisha(id) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
     if (!r || r.status !== 'playing' || p.out) throw Error('Ein fester Zug geht nur während deiner laufenden Runde.');
+    this.requireFun(r,p);
     if (this.now() < r.shishaReadyAt) throw Error('Erst wieder klare Sicht. Die Shisha braucht kurz Pause.');
     r.shishaReadyAt = this.now() + SHISHA_COOLDOWN_MS;
     r.nextPuffAt = Math.max(r.nextPuffAt, this.now() + 8000);
@@ -306,7 +362,7 @@ export class Arena {
     const r = this.roomFor(id); if (!r) return null;
     const p = r.players.find(p => p.id === id);
     if (r.teamMessages) delete r.teamMessages[r.players.indexOf(p) % 2];
-    if (r.status === 'playing' && !p.out) this.surrender(id);
+    if (r.status === 'playing' && !p.out) { const pause=r.pause,turn=r.turn; r.pause=null; this.surrender(id); if(r.status==='playing') r.pause=pause && r.turn!==turn ? {...pause,remaining:this.turnMs,botRemaining:1400}:pause; }
     // A departing player becomes a vacant, surrendered seat until the round ends.
     if (r.round > 0) { p.id = `left-${randomBytes(4).toString('hex')}`; p.bot = true; p.connected = false; }
     else r.players = r.players.filter(p => p.id !== id);
@@ -317,10 +373,11 @@ export class Arena {
   tick() {
     const changed = new Set();
     for (const r of this.rooms.values()) {
+      if (r.pause && r.players.some(p=>!p.bot && p.connected)) r.humanActivity=this.now();
       if (this.now() - r.humanActivity >= 600000) { this.rooms.delete(r.code); r.expired = true; changed.add(r); continue; }
-      if (r.status !== 'playing') continue;
+      if (r.status !== 'playing' || r.pause) continue;
       if (this.now() >= r.nextPuffAt) {
-        const smokers = r.players.filter(p => !p.out && (p.bot || p.connected));
+        const smokers = r.players.filter(p => !p.out && !(p.gesturesMutedUntil > this.now()) && (p.bot || p.connected));
         if (smokers.length) {
           const smoker = smokers[randomInt(smokers.length)];
           this.event(r, 'puff', { player: smoker.id, name: smoker.name }); changed.add(r);
@@ -333,15 +390,25 @@ export class Arena {
         this.event(r, 'thinker', { player: p.id, name: p.name }); changed.add(r);
       }
       if (!automatic && !timedOut) continue;
+      // Pass no stock order, opponent hands or partner hands to the strategy.
+      let nextSeat = (r.turn + 1) % 4;
+      while (r.players[nextSeat].out && nextSeat !== r.turn) nextSeat = (nextSeat + 1) % 4;
+      const strategy = { level: r.botLevel || 'bur', winning: winningHand,
+        visible: [...r.discards.flat(), ...(r.publicPickups || []).map(e => e.tile)],
+        nextPickups: r.mode === 'teams' && nextSeat % 2 === r.turn % 2 ? [] : (r.publicPickups || []).filter(e => e.seat === nextSeat).slice(-3).map(e => e.tile) };
+
       if (r.phase === 'draw') {
         const offer = r.lastDiscard ? r.discards[r.lastDiscard.seat].at(-1) : null;
         const candidate = offer ? [...p.hand, offer] : null;
-        const bestDiscard = candidate ? botDiscard(candidate) : null;
-        const take = offer && (winningHand(candidate.filter(t => t.id !== bestDiscard.id)) ||
-          (bestDiscard.id !== offer.id && usefulness(offer, p.hand) > Math.min(...p.hand.map(t => usefulness(t, p.hand)))));
+        const bestDiscard = candidate ? (p.bot ? chooseDiscard(candidate, strategy) : botDiscard(candidate)) : null;
+        const remainder = candidate?.filter(t => t.id !== bestDiscard.id);
+        const improved = offer && bestDiscard.id !== offer.id && (p.bot
+          ? analyseHand(remainder, strategy).score() > analyseHand(p.hand, strategy).score() + .5
+          : usefulness(offer, p.hand) > Math.min(...p.hand.map(t => usefulness(t, p.hand))));
+        const take = offer && (winningHand(remainder) || (improved && (strategy.level !== 'fmi' || !p.bot || Math.random() > .25)));
         this.draw(p.id, take ? 'discard' : 'stock');
       } else {
-        const tile = botDiscard(p.hand);
+        const tile = p.bot ? chooseDiscard(p.hand, strategy) : botDiscard(p.hand);
         this.discard(p.id, tile.id, Boolean(winningHand(p.hand.filter(t => t.id !== tile.id))));
         if (timedOut && !p.bot) this.event(r, 'timeout', { player: p.id, name: p.name });
       }
@@ -352,10 +419,11 @@ export class Arena {
   snapshot(r, id) {
     const me = r.players.find(p => p.id === id);
     return {
+      locked:Boolean(r.locked), paused:Boolean(r.pause), pauseRemaining:r.pause?.remaining || 0, reportsEnabled:r.reportsEnabled!==false, groupLinked:Boolean(r.groupChatId), socialReport:r.socialReport || null, awards:r.awards || [],
       code: r.code, owner: r.owner, status: r.status, round: r.round, turn: r.turn, phase: r.phase,
-      mode: r.mode, roundLimit: r.roundLimit, roundLimitChosen: r.roundLimitChosen, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
+      botLevel: r.botLevel || 'bur', mode: r.mode, roundLimit: r.roundLimit, roundLimitChosen: r.roundLimitChosen, scores: r.scores, totals: r.totals, matchComplete: r.matchComplete, matchWinners: r.matchWinners, matchNumber: r.matchNumber,
       teamMessage: this.teamMessage(r, id), lastDraw: me?.lastDraw || null, rules: 'fixed-jokers', stockCount: r.stock?.length || 0, deadline: r.deadline, serverNow: this.now(), result: r.result,
-      hand: me?.hand || [], players: r.players.map((p, seat) => ({ seat, team: seat % 2, id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, count: p.hand.length, wins: p.wins })),
+      hand: me?.hand || [], players: r.players.map((p, seat) => ({ seat, team: seat % 2, id: p.id, name: p.name, bot: p.bot, out: p.out, connected: p.connected, gesturesMutedUntil:p.gesturesMutedUntil || 0, count: p.hand.length, wins: p.wins })),
       canBluff: Boolean(r.status === 'playing' && me && !me.out && me.hand.some(tile => isWild(tile))),
       bluffReadyAt: Math.max(Number.isFinite(me?.lastBluff) ? me.lastBluff + BLUFF_COOLDOWN_MS : 0, Number.isFinite(me?.lastGesture) ? me.lastGesture + 2500 : 0),
       shishaReadyAt: r.shishaReadyAt || 0,

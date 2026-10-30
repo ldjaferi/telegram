@@ -1,3 +1,4 @@
+import { SOCIAL_COMMANDS } from './social.js';
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -11,7 +12,7 @@ export function botReply(config, message, arena) {
   let text, reply_markup;
   if (command === '/id') text = `Deine Telegram-ID: ${id}`;
   else if (!allowed) text = `Dieser Gjurzi-Tisch ist noch privat. Deine Telegram-ID für die Freischaltung: ${id}`;
-  else if (command === '/help') text = 'Gjurzi mit festen Jokern: Ziehen, abwerfen, 14 Steine zu Reihen, Gruppen oder sieben Paaren ordnen. Mit /nisja geht es an den Tisch. Freie Plätze übernehmen Computer. Brettwerfen gibt die Runde auf – die anderen spielen weiter. Gesten inklusive.';
+  else if (command === '/help') text = 'Gjurzi mit festen Jokern: Ziehen, abwerfen, 14 Steine zu Reihen, Gruppen oder sieben Paaren ordnen. Mit /nisja geht es an den Tisch. Freie Plätze übernehmen Computer. Brettwerfen gibt die Runde auf – die anderen spielen weiter. Gesten inklusive.\n\nNeu: /wo als Antwort auf einen Kollegen (Host), /buj, /revanche (Host), /spielabend, /titel und /bericht. Host-Werkzeuge im Spiel unter Mehr. Gruppenadmins: /ruhe (5 Minuten), /reden, /sperren (Bestätigung), /entsperren – jeweils als Antwort auf die betreffende Person. Private Erinnerungen: /start an, /stop aus.';
   else if (['group', 'supergroup'].includes(message.chat.type) && ['/nisja', '/play'].includes(command)) {
     try {
       if (!arena) throw Error('Der Spielserver ist gerade nicht bereit. Bitte versuche es später erneut.');
@@ -37,20 +38,20 @@ export function botReply(config, message, arena) {
 export async function configureBot(config, call) {
   const me = await call('getMe', {});
   if (config.botUsername && me.username.toLowerCase() !== config.botUsername.toLowerCase()) throw Error('Bot-Identität stimmt nicht mit der Konfiguration überein.');
-  config.botUsername = me.username;
+  config.botUsername = me.username; config.botId = me.id;
   const hook = await call('getWebhookInfo', {});
   if (hook.url) throw Error('Ein Webhook ist eingerichtet; Polling wurde nicht gestartet.');
   await call('setMyCommands', { commands: [
     { command: 'nisja', description: 'Gjurzi spielen — allein oder mit Freunden' },
     { command: 'help', description: 'Spielregeln und Bedienung' },
-    { command: 'id', description: 'Meine Telegram-ID anzeigen' }
+    { command: 'id', description: 'Meine Telegram-ID anzeigen' }, ...SOCIAL_COMMANDS
   ] });
   await call('setChatMenuButton', { menu_button: { type: 'web_app', text: 'Gjurzi spielen', web_app: { url: config.publicUrl.replace(/\/$/, '') + '/' } } });
   await call('setMyDescription', { description: 'Gjurzi — aber frech. Gjurzi mit festen Jokern mit Holzbrettern, Comic-Joker und schlechten Manieren. Spiele mit Freunden oder Computergegnern. Wirf Steine ab, verteile Gesten oder gleich das ganze Brett.' });
   await call('setMyShortDescription', { short_description: 'Gjurzi mit festen Jokern. Holzbretter, freche Gesten und Freunde am Tisch. Jetzt spielen!' });
 }
 
-export async function runBot(config, signal, arena) {
+export async function runBot(config, signal, arena, social) {
   const call = async (method, payload) => {
     try {
       const response = await fetch(`https://api.telegram.org/bot${config.botToken}/${method}`, {
@@ -63,6 +64,9 @@ export async function runBot(config, signal, arena) {
     } catch (error) { if (error.telegram) throw error; throw Error(`Telegram ${method} nicht erreichbar.`); }
   };
   await configureBot(config, call);
+  if(social) {social.call=call;social.botId=config.botId;}
+  const reportTimer=setInterval(()=>{void social?.drain();},2000);
+  signal.addEventListener('abort',()=>{clearInterval(reportTimer);if(social) social.call=null;},{once:true});
   console.log(`Telegram @${config.botUsername}: Menü und Befehle eingerichtet.`);
   const offsetFile = config.botOffsetPath || 'data/bot-offset';
   let offset = 0;
@@ -71,10 +75,19 @@ export async function runBot(config, signal, arena) {
   await mkdir(dirname(offsetFile), { recursive: true });
   while (!signal.aborted) {
     try {
-      const updates = await call('getUpdates', { offset, timeout: 25, allowed_updates: ['message'] });
+      const updates = await call('getUpdates', { offset, timeout: 25, allowed_updates: ['message','callback_query'] });
       for (const update of updates) {
-        const reply = botReply(config, update.message, arena);
-        if (reply) await call('sendMessage', reply);
+        try {
+          if(update.callback_query && social) await social.callback(update.callback_query);
+          else if(update.message) {
+            social?.remember(update.message);
+            const handled=social && await social.command(update.message);
+            if(!handled) {const reply=botReply(config,update.message,arena);if(reply) await call('sendMessage',reply);}
+          }
+        } catch(error) {
+          const chat=update.message?.chat || update.callback_query?.message?.chat;
+          if(chat) await call('sendMessage',{chat_id:chat.id,text:error.telegram?'Telegram hat die Aktion abgelehnt. Prüfe Gruppenrechte und Mitgliedschaft.':error.message}).catch(()=>{});
+        }
         offset = update.update_id + 1;
         await writeFile(offsetFile + '.tmp', String(offset), { mode: 0o600 });
         await rename(offsetFile + '.tmp', offsetFile);
