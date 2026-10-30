@@ -296,3 +296,16 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   sudo-Sperre nach Installation wiederhergestellt.
 - Rückfallkopien: /home/debian/before-c03f904-index.html und
   /home/debian/before-c03f904-style.css; Skript: /home/debian/install-c03f904.sh.
+
+30.10.2026 — Deckende Steine und Bedienelemente live
+- Release 3133dc3: deaktivierte Buttons werden über Farbe statt Transparenz
+  gekennzeichnet. Ziehstapel und Abwurfsteine bleiben vollständig deckend;
+  mögliche Ziehaktionen erhalten einen goldenen Rahmen. Bereits genommene
+  Abwürfe behalten ihre Markierung, aufgegebene Spieler ein graues Avatarbild.
+- Elf Chromium-Prüfungen bestanden. Zusätzliche Pixelprüfung bei 375x600 und
+  1440x900 für Ziehen, Abwerfen und fremden Zug: alle sechs Steinflächen
+  bleiben bei geänderter Filzfarbe identisch; Zugberechtigungen unverändert.
+- CSS ohne Neustart installiert, HTTPS-Datei bytegleich, healthz OK,
+  okey/gamebot/caddy aktiv. sudo-Sperre wiederhergestellt.
+- Rückfallkopie: /home/debian/before-3133dc3-style.css;
+  Installationsskript: /home/debian/install-3133dc3.sh.
