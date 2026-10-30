@@ -392,3 +392,26 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
   body .table .round-pill{position:relative;inset:auto;transform:none;grid-column:1/-1;grid-row:5;justify-self:center;font-size:9px;padding:3px}
   .table .shisha-prop{display:none}#rack .rack-engraving{display:none}
 }
+
+/* Give names their own row below avatars and public discard tiles. */
+body .table .seat{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px;row-gap:3px;align-items:center}
+body .table .seat .avatar-button{grid-column:1;grid-row:1;margin:0 auto}
+body .table .seat .seat-discard{position:relative;inset:auto;transform:none;grid-column:2;grid-row:1;align-self:center}
+body .table .seat .seat-name{grid-column:1/-1;grid-row:2;margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body .table .seat .seat-status{grid-column:1/-1;grid-row:3;margin:0}
+body .table .seat .mini-rack{grid-column:1/-1;grid-row:4;margin:5px auto 0}
+@media(min-width:1001px) and (min-height:541px){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(280px,1fr) minmax(180px,min(40%,calc(100% - 336px)))}
+  body[data-stage=playing] .table .center{top:auto;bottom:94px}
+  body[data-stage=playing] .table .piles{--tile-w:32px;--tile-h:42px}
+  body[data-stage=playing] .table .pile-button{min-height:42px}
+  body[data-stage=playing] .table .joker-hint{margin-top:4px}
+  body .table .seat .avatar-button{width:44px;height:44px;font-size:27px}
+  body .table .seat .seat-discard{--tile-w:32px;--tile-h:44px}
+  body .table .seat .seat-name{font-size:13px;line-height:1.2}
+  body .table .seat .seat-status{font-size:11px;line-height:1.2}
+  .rack-area,.in-game .rack-area{--tile-w:54px;--tile-h:72px}
+}
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(290px,1fr) minmax(194px,40%)}
+}
