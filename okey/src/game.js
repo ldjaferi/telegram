@@ -1,8 +1,9 @@
 import { randomInt, randomBytes } from 'node:crypto';
 import { TEAM_QUESTIONS, TEAM_MESSAGE_MS } from '../public/team-chat.js';
 import { bestCombinations } from '../public/combinations.js';
+import { canMakeExcuse, excuseLines } from '../public/table-fun.js';
 
-export const GESTURES = ['finger', 'buj', 'fart', 'tea'];
+export const GESTURES = ['finger', 'buj', 'fart', 'tea', 'besa', 'excuse'];
 export const BLUFF_COOLDOWN_MS = 8000;
 export const SMOKE_DURATION_MS = 3000;
 export const SHISHA_COOLDOWN_MS = 15000;
@@ -171,7 +172,7 @@ export class Arena {
     for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
   }
-  deadline(r) { r.deadline = this.now() + this.turnMs; r.botAt = this.now() + 1400; }
+  deadline(r) { r.deadline = this.now() + this.turnMs; r.botAt = this.now() + 1400; r.thinkerShown = false; }
   requireTurn(id, phase) {
     const r = this.roomFor(id); const p = r?.players.find(p => p.id === id);
     if (!r || r.status !== 'playing' || p.out || r.players[r.turn].id !== id || r.phase !== phase) throw Error('Du bist damit noch nicht dran.');
@@ -276,9 +277,14 @@ export class Arena {
   gesture(id, gesture, target) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
     if (!r || !GESTURES.includes(gesture)) throw Error('Unbekannte Geste.');
+    if (gesture === 'besa' && (r.status !== 'playing' || p.out)) throw Error('Besa gibt es während deiner laufenden Runde.');
+    if (gesture === 'excuse' && !canMakeExcuse(r, r.players.indexOf(p))) throw Error('Ausreden gibt es nach einer Niederlage.');
+    if (gesture === 'besa' || gesture === 'excuse') target = null;
     if (target && (!r.players.some(p => p.id === target) || target === id)) throw Error('Wähle einen Mitspieler.');
     if (this.now() - p.lastGesture < 2500) throw Error('Erst mal Luft holen.');
-    p.lastGesture = this.now(); this.event(r, 'gesture', { player: id, name: p.name, gesture, target: target || null });
+    const lines = gesture === 'excuse' ? excuseLines(r.mode) : null;
+    p.lastGesture = this.now(); this.event(r, 'gesture', { player: id, name: p.name, gesture, target: target || null,
+      ...(lines ? { line: lines[randomInt(lines.length)] } : {}) });
   }
   bluff(id) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);
@@ -322,6 +328,10 @@ export class Arena {
         r.nextPuffAt = this.now() + 18000 + randomInt(12000);
       }
       const p = r.players[r.turn], automatic = p.bot && this.now() >= r.botAt, timedOut = this.now() >= r.deadline;
+      if (!p.bot && p.connected && !p.out && !timedOut && !r.thinkerShown && this.now() >= r.deadline - this.turnMs + 45000) {
+        r.thinkerShown = true;
+        this.event(r, 'thinker', { player: p.id, name: p.name }); changed.add(r);
+      }
       if (!automatic && !timedOut) continue;
       if (r.phase === 'draw') {
         const offer = r.lastDiscard ? r.discards[r.lastDiscard.seat].at(-1) : null;

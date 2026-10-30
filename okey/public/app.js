@@ -3,6 +3,7 @@ import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
 import { TableMusic, shishaBubbles, TileClack } from './music.js';
 import { FreeRack } from './rack.js';
+import { canMakeExcuse, teaBill } from './table-fun.js';
 const $ = s => document.querySelector(s);
 const appBase = new URL('.', document.baseURI);
 const apiUrl = path => new URL(path.replace(/^\//, ''), appBase);
@@ -108,7 +109,19 @@ function sound(kind = 'tile') {
     audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume();
     if (kind === 'shisha' || kind === 'puff') { stopBubbles?.(); stopBubbles=shishaBubbles(audio,kind==='shisha'); return; }
     const t = audio.currentTime, gain = audio.createGain(); gain.connect(audio.destination);
-    if (kind === 'throw') {
+    if (kind === 'sad-trombone') {
+      const oscillator = audio.createOscillator(), filter = audio.createBiquadFilter();
+      oscillator.type = 'sawtooth'; filter.type = 'lowpass'; filter.frequency.value = 800;
+      oscillator.connect(filter); filter.connect(gain);
+      for (const [i, frequency] of [233.08, 220, 207.65, 196].entries()) {
+        const at = t + i * .28;
+        oscillator.frequency.setValueAtTime(frequency, at);
+        gain.gain.setValueAtTime(.001, at); gain.gain.linearRampToValueAtTime(.065, at + .035);
+        gain.gain.exponentialRampToValueAtTime(.001, at + .26);
+      }
+      oscillator.frequency.exponentialRampToValueAtTime(146.83, t + 1.1);
+      oscillator.start(t); oscillator.stop(t + 1.13);
+    } else if (kind === 'throw') {
       const seconds = .3;
       const buffer = audio.createBuffer(1, audio.sampleRate * seconds, audio.sampleRate), data = buffer.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -193,6 +206,7 @@ async function connect() {
       if (message.type === 'seat-options') { showSeatChoices(message); return; }
       if (message.type === 'error') {
         if (message.code === 'invalid_claim') {
+          sound('sad-trombone');
           modal('<div class="invalid-claim"><span aria-hidden="true">😵‍💫</span><h2>A budall ie a</h2><p>Deine Steine bilden noch keine vollständige Gewinnhand.</p><button class="button primary" data-action="dismiss-message">Weiter spielen</button></div>');
           telegram?.HapticFeedback?.notificationOccurred('error');
         } else toast(message.message);
@@ -264,6 +278,7 @@ function renderCenter() {
     const detail=room.matchComplete?(result.winner?`Letzte Runde gewonnen: ${result.name}${result.joker?' · Joker-Abschluss':''}.`:'Letzte Runde: Vorrat leer.'):result.joker?'E mshele me Joker. Bravo i ke gjek.':result.kind==='pairs'?'Sieben Paare. Doppelt frech.':result.kind==='stock'?'Vorrat leer. Restpunkte zählen für alle.':'';
     const celebrate=room.matchComplete?room.matchWinners.length===1:Boolean(result.winner);
     $('#center').innerHTML = `<p class="result-title">${title}</p>${finalNames||team?`<p class="result-winners">${esc(finalNames||team)}</p>`:''}${celebrate?`<p class="result-quip">${esc(victoryLine())}</p>`:''}${detail?`<p class="result-copy">${esc(detail)}</p>`:''}<div class="welcome-buttons">${room.owner === user.id ? room.matchComplete ? '<button class="button primary" data-action="new-match">Neue Partie ↻</button>' : '<button class="button primary" data-action="start">Nächste Runde →</button>' : '<span class="welcome-sub">Warte auf den Gastgeber.</span>'}<button class="button secondary" data-action="scores">Punktestand</button>${room.revealed ? '<button class="button secondary" data-action="reveal">Gewinnhand</button>' : ''}</div>`;
+    $('#center').insertAdjacentHTML('beforeend', `<div class="result-fun"><button class="button secondary" data-action="tea-bill">☕ Çay-Rechnung</button>${canMakeExcuse(room, room.players.findIndex(p => p.id === user.id)) ? '<button class="button secondary" data-gesture="excuse">🙄 Ausrede finden</button>' : ''}</div><p class="tea-caption">${esc(teaBill(room)?.caption || '')}</p>`);
     return;
   }
   const mine=room.players.findIndex(p=>p.id===user.id);
@@ -293,6 +308,7 @@ function renderActions() {
   $('#leave').hidden = !room;
   $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Mshile“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
   for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room;
+  $('[data-gesture=besa]').disabled = !connected || room?.status !== 'playing' || me()?.out;
   renderBluff();
   renderShisha();
 }
@@ -360,6 +376,7 @@ function showSmoke(event) {
 }
 
 function showEvent(event) {
+  if (event.type === 'thinker') { toast(`⌛ ${event.name}: Planst du deinen Zug oder deine Pension?`); return; }
   if (event.type === 'seat-taken') { toast(`${event.name} übernimmt den Platz von ${event.previousName}.`); return; }
   if (event.type === 'puff') { showPuff(event); return; }
   if (event.type === 'smoke') { showSmoke(event); return; }
@@ -379,6 +396,12 @@ function showEvent(event) {
     $('#table-event').innerHTML = `<div class="event-card joker-bluff"><span class="bluff-kicker">JOKER-BLUFF</span><span class="bluff-star left" aria-hidden="true">✦</span><img class="bluff-chest" src="bluff.svg" alt="Eine leicht behaarte Comic-Männerbrust wackelt"><span class="bluff-star right" aria-hidden="true">✦</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'zeigst' : 'zeigt'} Brust.</span><strong class="bluff-claim">„Ich hab einen Joker!“</strong></div>`;
   } else {
     sound(event.gesture === 'fart' ? 'juice' : 'gesture');
+    if (event.gesture === 'besa' || event.gesture === 'excuse') {
+      const besa = event.gesture === 'besa';
+      $('#table-event').innerHTML = `<div class="event-card fun-announcement"><span class="event-emoji" aria-hidden="true">${besa ? '🤞' : '🙄'}</span><strong>${esc(event.name)}${besa ? ' gibt Besa' : ' hat eine Ausrede'}</strong><span class="event-copy">${besa ? 'Besa, ich habe keinen Joker!' : esc(event.line)}</span></div>`;
+      eventTimer = setTimeout(() => $('#table-event').replaceChildren(), 4500);
+      return;
+    }
     if (event.gesture === 'fart') {
       $('#table-event').innerHTML = `<div class="event-card juice"><span class="event-emoji">${juiceArt}</span><strong>Ein Glas Apfelsaft</strong><span class="event-copy">Ramiz bringt euch einen Apfelsaft mit Ingwershot vom Rewe Karaxha</span></div>`;
       telegram?.HapticFeedback?.impactOccurred('light');
@@ -398,6 +421,10 @@ function showEvent(event) {
   eventTimer = setTimeout(() => { $('#table-event').innerHTML = ''; }, event.type === 'bluff' ? 3800 : event.type === 'throw' ? 3300 : 2500);
 }
 
+function showTeaBill() {
+  const bill = teaBill(room); if (!bill) return;
+  modal(`<div class="tea-bill"><span class="tea-bill-icon" aria-hidden="true">☕</span><h2>Die Çay-Rechnung</h2><p>${esc(bill.scope)}</p>${bill.payers.map(payer => `<section><strong>${esc(payer.label)}</strong>${room.mode === 'teams' ? `<p>${payer.names.map(esc).join(' &amp; ')}</p>` : ''}<p>${payer.points} Strafpunkte</p></section>`).join('')}<p><strong>${esc(bill.caption)}</strong></p><p>Zu zahlen: ${bill.payers.length ? 'eine Runde Çay für den Tisch.' : 'ein freundliches Dankeschön.'}</p><button class="button primary" data-action="dismiss-message">Geht klar ☕</button></div>`);
+}
 
 function showWinningHand(){
   const solved=winningGroups(room.revealed || []);
@@ -430,7 +457,8 @@ document.addEventListener('click', e => {
   if (answer) { send('team-answer', { messageId: answer.dataset.messageId, answer: answer.dataset.teamAnswer }); $('#modal').close(); return; }
   const teammate = e.target.closest('[data-team-target]');
   if (teammate) { target = teammate.dataset.teamTarget; $('#modal').close(); render(); return; }
-  const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target: gesture.dataset.gesture === 'fart' ? null : target }); return; }
+  if (e.target.closest('[data-action=tea-bill]')) { showTeaBill(); return; }
+  const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target: ['fart', 'besa', 'excuse'].includes(gesture.dataset.gesture) ? null : target }); return; }
   const player = e.target.closest('[data-target]'); if (player?.dataset.target) {
     const other = room?.players.find(p => p.id === player.dataset.target);
     if (room?.mode === 'teams' && other && other.team === me()?.team && !other.bot) { teamMenu(other); return; }
@@ -473,7 +501,7 @@ $('#leave').onclick = () => {
   modal('<h2>Schon Feierabend?</h2><p>Beim Verlassen gibst du diese Runde auf. Die anderen spielen weiter.</p><button id="confirm-leave" class="button primary">Tisch verlassen</button>');
   $('#confirm-leave').onclick = () => { send('leave'); $('#modal').close(); };
 };
-$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf deinen menschlichen Teampartner für die privaten Fragen „A ta msheli“ und „Si je?“. Gegner kannst du weiterhin als Ziel für Gesten auswählen.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
+$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf deinen menschlichen Teampartner für die privaten Fragen „A ta msheli“ und „Si je?“. Gegner kannst du weiterhin als Ziel für Gesten auswählen.</li><li><strong>Besa:</strong> Unter „Mehr“ kannst du behaupten: „Besa, ich habe keinen Joker!“ – ob es stimmt, weisst nur du. Nach einer Niederlage findest du beim Ergebnis eine Ausrede und die Çay-Rechnung. Die meisten Strafpunkte zahlen scherzhaft den Çay; bei Gleichstand wird geteilt.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Brett fliegt“ gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
 
 render(); connect();
 

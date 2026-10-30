@@ -7,6 +7,7 @@ import { Sessions, validateTelegram } from './auth.js';
 
 const assets = new Map([['/', 'index.html'], ['/app.js', 'app.js'], ['/melds.js', 'melds.js'], ['/music.js', 'music.js'], ['/rack.js', 'rack.js'], ['/combinations.js', 'combinations.js'], ['/team-chat.js', 'team-chat.js'], ['/style.css', 'style.css'], ['/egg.svg', 'egg.svg'], ['/art.svg', 'art.svg'], ['/bluff.svg', 'bluff.svg'], ['/shisha.svg', 'shisha.svg']]);
 assets.set('/keffiyeh.svg','keffiyeh.svg'); assets.set('/klack.mp3','klack.mp3');
+assets.set('/table-fun.js','table-fun.js');
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml', mp3: 'audio/mpeg' };
 export function createApplication(config = {}) {
   config = { host: '127.0.0.1', port: 3200, dev: true, publicUrl: 'http://127.0.0.1:3200', allowedIds: [], allowPublic: false, ...config };

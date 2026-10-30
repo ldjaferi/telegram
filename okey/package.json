@@ -11,7 +11,7 @@
     "start": "node src/main.js",
     "dev": "node --watch src/main.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check src/game.js && node --check src/server.js && node --check src/bot.js && node --check src/main.js && node --check public/app.js && node --check public/rack.js && node --check public/melds.js && node --check public/music.js && node --check public/combinations.js && node --check public/team-chat.js",
+    "check": "node --check src/game.js && node --check src/server.js && node --check src/bot.js && node --check src/main.js && node --check public/app.js && node --check public/rack.js && node --check public/melds.js && node --check public/music.js && node --check public/combinations.js && node --check public/team-chat.js && node --check public/table-fun.js",
     "test:layout": "node --test test/*.browser.cjs"
   },
   "dependencies": {
