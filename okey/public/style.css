@@ -494,3 +494,11 @@ body[data-stage=welcome] main>#table-actions,body[data-stage=lobby] main>#table-
   body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-column:2;grid-row:2/4}
   body main>#table-actions{grid-column:1;grid-row:3;gap:3px}
 }
+
+/* Leave horizontal working space for arranging melds on portrait phones. */
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) #rack-tiles{
+    --tile-w:clamp(28px,8.2vw,36px);
+    --tile-h:calc(var(--tile-w)*1.65);
+  }
+}
