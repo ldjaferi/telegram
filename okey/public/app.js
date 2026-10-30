@@ -12,8 +12,9 @@ const colors = ['Rot', 'Gelb', 'Blau', 'Schwarz'];
 const tableNames = ['Te Besniku', 'Te Blerimi', 'Te Agroni', 'Te Iliri', 'Te Arbeni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ardiani', 'Te Gëzimi', 'Te Fatosi', 'Te Petriti', 'Te Flamuri', 'Te Burimi', 'Te Albani', 'Te Taulanti'];
 const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
 const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
-const gestureArt = { finger: '🖕', buj: '🌚', fart: '💨', tea: '☕' };
-const gestureCopy = { finger: 'sendet liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', fart: 'war es ganz bestimmt nicht', tea: 'gibt einen Çay aus' };
+const gestureArt = { finger: '🖕', buj: '🌚', tea: '☕' };
+const gestureCopy = { finger: 'sendet liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', tea: 'gibt einen Çay aus' };
+const juiceArt = '<svg class="juice-glass" viewBox="0 -8 64 80" aria-hidden="true" focusable="false"><path d="M12 13h40l-5 49q-1 5-7 5H24q-6 0-7-5z" fill="#eaf3e9" stroke="#fef9e5" stroke-width="3"/><path d="M16 29h32l-4 32q0 2-4 2H24q-4 0-4-2z" fill="#e5a931"/><ellipse cx="32" cy="29" rx="16" ry="4" fill="#f5cb57"/><path d="m22 22 3 32" stroke="#fff6d0" stroke-width="3" stroke-linecap="round"/><path d="M41 17c-13-11-9-23-1-16 8-7 17 3 9 12l-8 8z" fill="#d65140" stroke="#83352a" stroke-width="1.5"/><path d="M41 4q-1-6 5-7" fill="none" stroke="#695333" stroke-width="2"/><path d="M42 3q4-9 13-1-8 5-13 1" fill="#609657"/></svg>';
 const victoryLines = [
   'Nicht so angeberisch bitte.',
   'Einmal gewonnen, schon Tischpräsident.',
@@ -47,6 +48,8 @@ let muted = localStorage.getItem('okey-muted') === 'true', audio, music, tileCla
 let audioUnlocked = false, suppressClickUntil = 0;
 const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); if(move?.contact&&!muted&&!document.hidden)tileClack?.play(); } });
 for(const button of [...document.querySelectorAll('.gestures button'), $('#bluff'), $('#shisha'), $('#throw')]) $('#table-actions').append(button);
+// Keep the existing wire ID so active rooms can receive the replacement action without a restart.
+$('[data-gesture="fart"] span').innerHTML = juiceArt;
 $('#bluff').setAttribute('aria-label','Joker-Bluff'); $('#shisha').setAttribute('aria-label','Fester Zug'); $('#throw').setAttribute('aria-label','Brett werfen und Runde aufgeben');
 let token = sessionStorage.getItem('okey-token') || '';
 let smokeTimer, stopBubbles;
@@ -105,12 +108,15 @@ function sound(kind = 'tile') {
     audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume();
     if (kind === 'shisha' || kind === 'puff') { stopBubbles?.(); stopBubbles=shishaBubbles(audio,kind==='shisha'); return; }
     const t = audio.currentTime, gain = audio.createGain(); gain.connect(audio.destination);
-    if (kind === 'fart' || kind === 'throw') {
-      const seconds = kind === 'fart' ? .65 : .3;
+    if (kind === 'throw') {
+      const seconds = .3;
       const buffer = audio.createBuffer(1, audio.sampleRate * seconds, audio.sampleRate), data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (kind === 'fart' ? (.5 + .5 * Math.sin(i / audio.sampleRate * 210)) : 1);
-      const source = audio.createBufferSource(), filter = audio.createBiquadFilter(); source.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = kind === 'fart' ? 260 : 1700; source.connect(filter); filter.connect(gain);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const source = audio.createBufferSource(), filter = audio.createBiquadFilter(); source.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = 1700; source.connect(filter); filter.connect(gain);
       gain.gain.setValueAtTime(.2, t); gain.gain.exponentialRampToValueAtTime(.001, t + seconds); source.start(t);
+    } else if (kind === 'juice') {
+      const oscillator = audio.createOscillator(); oscillator.type = 'sine'; oscillator.frequency.value = 1450; oscillator.connect(gain);
+      gain.gain.setValueAtTime(.07, t); gain.gain.exponentialRampToValueAtTime(.001, t + .45); oscillator.start(t); oscillator.stop(t + .46);
     } else {
       const oscillator = audio.createOscillator(); oscillator.type = kind === 'tile' ? 'triangle' : 'sine'; oscillator.frequency.setValueAtTime(kind === 'tile' ? 800 : 520, t); oscillator.frequency.exponentialRampToValueAtTime(180, t + .13); oscillator.connect(gain); gain.gain.setValueAtTime(.12, t); gain.gain.exponentialRampToValueAtTime(.001, t + .15); oscillator.start(t); oscillator.stop(t + .16);
     }
@@ -372,14 +378,20 @@ function showEvent(event) {
     sound('gesture');
     $('#table-event').innerHTML = `<div class="event-card joker-bluff"><span class="bluff-kicker">JOKER-BLUFF</span><span class="bluff-star left" aria-hidden="true">✦</span><img class="bluff-chest" src="bluff.svg" alt="Eine leicht behaarte Comic-Männerbrust wackelt"><span class="bluff-star right" aria-hidden="true">✦</span><span class="event-copy">${esc(event.name)} ${event.name === 'Du' ? 'zeigst' : 'zeigt'} Brust.</span><strong class="bluff-claim">„Ich hab einen Joker!“</strong></div>`;
   } else {
-    sound(event.gesture === 'fart' ? 'fart' : 'gesture');
+    sound(event.gesture === 'fart' ? 'juice' : 'gesture');
+    if (event.gesture === 'fart') {
+      $('#table-event').innerHTML = `<div class="event-card juice"><span class="event-emoji">${juiceArt}</span><strong>Ein Glas Apfelsaft</strong><span class="event-copy">Ramiz bringt euch einen Apfelsaft mit Ingwershot vom Rewe Karaxha</span></div>`;
+      telegram?.HapticFeedback?.impactOccurred('light');
+      eventTimer = setTimeout(() => { $('#table-event').replaceChildren(); }, 4500);
+      return;
+    }
     if (event.gesture === 'buj') {
       $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">Ihr sind alles Opfer und chömed i dhölll</span><small>${esc(event.name)}</small></div>`;
       eventTimer = setTimeout(() => { $('#table-event').replaceChildren(); }, 4500);
       return;
     }
     const recipient = event.target ? room.players.find(p => p.id === event.target)?.name : null;
-    const copy = event.name === 'Du' ? { finger: 'sendest liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', fart: 'warst es ganz bestimmt nicht', tea: 'gibst einen Çay aus' }[event.gesture] : gestureCopy[event.gesture];
+    const copy = event.name === 'Du' ? { finger: 'sendest liebe Grüsse', buj: 'Ihr sind alles Opfer und chömed i dhölll', tea: 'gibst einen Çay aus' }[event.gesture] : gestureCopy[event.gesture];
     $('#table-event').innerHTML = `<div class="event-card ${event.gesture}"><span class="event-emoji">${gestureArt[event.gesture]}</span><span class="event-copy">${esc(event.name)} ${copy}${recipient ? `<br>Für ${esc(recipient)}.` : '.'}</span></div>`;
   }
   telegram?.HapticFeedback?.impactOccurred('light');
@@ -418,7 +430,7 @@ document.addEventListener('click', e => {
   if (answer) { send('team-answer', { messageId: answer.dataset.messageId, answer: answer.dataset.teamAnswer }); $('#modal').close(); return; }
   const teammate = e.target.closest('[data-team-target]');
   if (teammate) { target = teammate.dataset.teamTarget; $('#modal').close(); render(); return; }
-  const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target }); return; }
+  const gesture = e.target.closest('[data-gesture]'); if (gesture) { $('#tools-dialog').close(); sound('tile'); send('gesture', { gesture: gesture.dataset.gesture, target: gesture.dataset.gesture === 'fart' ? null : target }); return; }
   const player = e.target.closest('[data-target]'); if (player?.dataset.target) {
     const other = room?.players.find(p => p.id === player.dataset.target);
     if (room?.mode === 'teams' && other && other.team === me()?.team && !other.bot) { teamMenu(other); return; }
