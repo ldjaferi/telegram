@@ -105,15 +105,34 @@ export class Arena {
     if (solo) this.start(user.id);
     return r;
   }
-  join(user, code) {
+  seatChoices(r) {
+    return { code: r.code, mode: r.mode, round: r.round, roundLimit: r.roundLimit,
+      players: r.players.map((p, seat) => ({ id: p.id, name: p.name, seat, team: seat % 2,
+        available: p.bot && (r.status !== 'playing' || !p.out) })) };
+  }
+  join(user, code, botId) {
     const old = this.roomFor(user.id);
     if (old?.code === code) return old;
     if (old) throw Error('Verlasse zuerst deinen aktuellen Tisch.');
     const r = this.rooms.get(code);
     if (!r) throw Error('Diesen Tisch gibt es nicht mehr.');
-    if (r.status === 'playing' || (r.players.length >= 4 && !r.players.some(p => p.bot))) throw Error('Der Tisch ist voll oder die Runde läuft bereits.');
-    const vacant = r.players.findIndex(p => p.bot);
-    if (vacant >= 0) r.players[vacant] = this.player(user); else r.players.push(this.player(user)); r.humanActivity = this.now(); r.touched = this.now(); return r;
+    const choose = message => { throw Object.assign(Error(message), { code: 'choose_seat', choices: this.seatChoices(r) }); };
+    let vacant = r.players.findIndex(p => p.bot);
+    if (r.round > 0 || botId !== undefined) {
+      if (botId === undefined) choose('Wähle einen Computerplatz und spiel direkt mit.');
+      vacant = r.players.findIndex(p => p.id === botId && p.bot && (r.status !== 'playing' || !p.out));
+      if (vacant < 0) choose('Dieser Platz ist nicht mehr frei. Wähle einen anderen Computer.');
+    }
+    if (vacant < 0 && r.players.length >= 4) throw Error('Der Tisch ist voll. Alle vier Plätze sind bereits besetzt.');
+    if (vacant >= 0) {
+      // Seat, tiles, scores and turn phase belong to the ongoing game, not to the bot identity.
+      const previous = r.players[vacant];
+      r.players[vacant] = { ...previous, id: user.id, name: user.name, bot: false, connected: true };
+      if (r.teamMessages) delete r.teamMessages[vacant % 2];
+      if (r.status === 'playing' && r.turn === vacant) this.deadline(r);
+      this.event(r, 'seat-taken', { player: user.id, name: user.name, previousName: previous.name });
+    } else r.players.push(this.player(user));
+    r.humanActivity = this.now(); r.touched = this.now(); return r;
   }
   chooseTeam(id, team) {
     const r = this.roomFor(id);
@@ -147,7 +166,7 @@ export class Arena {
     while (r.players.length < 4) { const i = r.players.length - 1; r.players.push(this.player({ id: `bot-${r.code}-${i}`, name: BOT_NAMES[i] }, true)); }
     const tiles = deck();
     for (let i = tiles.length - 1; i > 0; i--) { const j = randomInt(i + 1); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
-    r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
+    r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.winningHand = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
     r.shishaReadyAt = 0; r.nextPuffAt = this.now() + 14000 + randomInt(10000);
     for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
@@ -194,6 +213,7 @@ export class Arena {
   finish(r, player, kind, joker = false) {
     if (r.status !== 'playing') return;
     r.status = 'finished'; r.result = { winner: player?.id || null, name: player?.name || null, kind, joker };
+    r.winningHand = player && kind !== 'last' ? [...player.hand] : null;
     if (player) player.wins++;
     const winnerSeat = player ? r.players.indexOf(player) : -1;
     const winner = winnerSeat < 0 ? -1 : r.mode === 'teams' ? winnerSeat % 2 : winnerSeat;
@@ -332,7 +352,7 @@ export class Arena {
       lastDiscards: r.lastDiscards || [],
       discards: r.discards?.map(pile => pile.at(-1) || null) || [],
       availableDiscard: r.lastDiscard ? r.discards[r.lastDiscard.seat].at(-1) : null,
-      revealed: r.status === 'finished' && r.result?.winner && r.result.kind !== 'last' ? r.players.find(p => p.id === r.result.winner)?.hand : null,
+      revealed: r.status === 'finished' ? r.winningHand : null,
       events: r.events
     };
   }

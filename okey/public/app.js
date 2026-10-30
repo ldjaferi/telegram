@@ -158,6 +158,7 @@ async function connect() {
     socket = new WebSocket(socketUrl);
     socket.onmessage = e => {
       const message = JSON.parse(e.data);
+      if (message.type === 'seat-options') { showSeatChoices(message); return; }
       if (message.type === 'error') {
         if (message.code === 'invalid_claim') {
           modal('<div class="invalid-claim"><span aria-hidden="true">😵‍💫</span><h2>A budall ie a</h2><p>Deine Steine bilden noch keine vollständige Gewinnhand.</p><button class="button primary" data-action="dismiss-message">Weiter spielen</button></div>');
@@ -172,6 +173,7 @@ async function connect() {
         if (next?.round !== room?.round) { order = []; selected = null; $('#rack').classList.remove('thrown'); }
         markDraw(next);
         room = next;
+        if (room && $('#modal-content').dataset.view === 'seat-choice') $('#modal').close();
         if (room) serverOffset = room.serverNow - Date.now();
         render(); syncTeamMessage();
         if (room) for (const event of room.events) if (event.seq > lastEvent) { lastEvent = event.seq; if (Date.now() + serverOffset - event.at < 4500) showEvent(event); }
@@ -316,6 +318,7 @@ function showSmoke(event) {
 }
 
 function showEvent(event) {
+  if (event.type === 'seat-taken') { toast(`${event.name} übernimmt den Platz von ${event.previousName}.`); return; }
   if (event.type === 'puff') { showPuff(event); return; }
   if (event.type === 'smoke') { showSmoke(event); return; }
   if (event.type === 'discard') { sound('tile'); return; }
@@ -360,7 +363,19 @@ async function invite() {
   try { await navigator.clipboard.writeText(link); toast(`${tableName(room.code)}: Einladung kopiert. Tischcode: ${room.code}`); }
   catch { modal(`<h2>${esc(tableName(room.code))}</h2><p>Teile diesen Link oder den Tischcode <strong>${room.code}</strong>.</p><input readonly aria-label="Einladungslink" value="${esc(link)}">`); $('#modal input').select(); }
 }
+function showSeatChoices(choice) {
+  const available = choice.players.filter(p => p.available);
+  modal(`<h2>Such dir einen Platz aus.</h2><p>${esc(tableName(choice.code))} · Runde ${choice.round || '–'} / ${choice.roundLimit}</p><p>${available.length ? esc(choice.message) : 'Im Moment ist kein Computerplatz frei.'}</p><div class="seat-choices">${available.map(p => {
+    const partner = choice.players[(p.seat + 2) % 4];
+    return `<button class="button secondary" data-bot-seat="${esc(p.id)}" data-room-code="${esc(choice.code)}"><strong>${esc(p.name)} ersetzen</strong><span>${choice.mode === 'teams' ? `Team ${p.team === 0 ? 'A' : 'B'} · Gegenüber: ${esc(partner?.name)}` : `Platz ${p.seat + 1} · Jeder gegen jeden`}</span></button>`;
+  }).join('')}</div><p>Du übernimmst die Steine und den bisherigen Punktestand dieses Platzes.</p><div class="seat-choice-actions"><button class="button secondary" data-refresh-seats="${esc(choice.code)}">Plätze aktualisieren</button><button class="button secondary" data-action="dismiss-message">Zurück</button></div>`);
+  $('#modal-content').dataset.view = 'seat-choice';
+}
 document.addEventListener('click', e => {
+  const botSeat = e.target.closest('[data-bot-seat]');
+  if (botSeat) { send('join', { code: botSeat.dataset.roomCode, botId: botSeat.dataset.botSeat }); return; }
+  const refreshSeats = e.target.closest('[data-refresh-seats]');
+  if (refreshSeats) { send('join', { code: refreshSeats.dataset.refreshSeats }); return; }
   const question = e.target.closest('[data-team-question]');
   if (question) { send('team-ask', { question: question.dataset.teamQuestion }); $('#modal').close(); return; }
   const answer = e.target.closest('[data-team-answer]');

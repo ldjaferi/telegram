@@ -97,7 +97,7 @@ export function createApplication(config = {}) {
             if (m.solo === true && ![5, 7].includes(m.roundLimit)) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen.');
             arena.create(user, m.solo === true, { mode: m.mode, roundLimit: m.roundLimit });
           }
-          else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase());
+          else if (m.type === 'join') arena.join(user, String(m.code || '').toUpperCase(), m.botId);
           else if (m.type === 'choose-team') arena.chooseTeam(user.id, m.team);
           else if (m.type === 'configure') arena.configure(user.id, { mode: m.mode, roundLimit: m.roundLimit });
           else if (m.type === 'new-match') arena.newMatch(user.id);
@@ -118,7 +118,10 @@ export function createApplication(config = {}) {
           else throw Error('Unbekannte Aktion.');
           const active = arena.roomFor(user.id); if (active) active.humanActivity = arena.now();
           broadcast(active);
-        } catch (error) { ws.send(JSON.stringify({ type: 'error', message: error.message, ...(error.code === 'invalid_claim' ? { code: error.code } : {}) })); }
+        } catch (error) {
+          if (error.code === 'choose_seat') ws.send(JSON.stringify({ type: 'seat-options', message: error.message, ...error.choices }));
+          else ws.send(JSON.stringify({ type: 'error', message: error.message, ...(error.code === 'invalid_claim' ? { code: error.code } : {}) }));
+        }
       });
       ws.on('close', () => {
         if (sockets.get(user.id) !== ws) return;

@@ -18,7 +18,7 @@ export function botReply(config, message, arena) {
       const room = arena.groupTable({ id, name: String(message.from.first_name || message.from.username || 'Spieler').slice(0, 32) }, message.chat.id);
       const owner = room.players.find(p => p.id === room.owner)?.name || 'Der Gastgeber';
       text = room.status === 'playing'
-        ? 'An eurem Tisch läuft bereits eine Runde. Wer mitspielt, kann hier zurück an den Tisch.'
+        ? 'An eurem Tisch läuft bereits eine Runde. Tippe auf „Hajde bojrum“ und wähle einen freien Computerplatz, um direkt mitzuspielen. Wer schon mitspielt, kehrt an seinen Platz zurück.'
         : `Tavolina esht gati.\nTippt auf „Hajde bojrum“ – du sitzt sofort am Tisch. Kein Code nötig. Danach links Team A oder rechts Team B wählen.\n${owner} startet die Runde, sobald ihr bereit seid. Maximal vier Spieler.`;
       reply_markup = { inline_keyboard: [[{ text: 'Hajde bojrum', url: `https://t.me/${config.botUsername}?startapp=room_${room.code}` }], ...(config.allowPublic ? [[{ text: 'Im Browser mitspielen', url: `${config.publicUrl.replace(/\/$/, '')}/?room=${room.code}` }]] : [])] };
     } catch (error) { text = error.message; }

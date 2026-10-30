@@ -53,7 +53,9 @@ test('5 and 7 round matches stop, choose lowest score and only host can reset',(
 test('empty stock scores both teams and ties are explicit; seats and team totals survive departures',()=>{
   const {a,r}=table();for(const p of r.players)p.hand=[t(0,8)];
   a.finish(r,null,'stock');assert.deepEqual(r.totals,[16,16]);
-  a.leave('b');assert.equal(r.players[2].id,'c');a.join({id:'new',name:'Replacement'},r.code);assert.equal(r.players[1].id,'new');assert.deepEqual(r.totals,[16,16]);
+  a.leave('b');assert.equal(r.players[2].id,'c');
+  assert.throws(()=>a.join({id:'new',name:'Replacement'},r.code),error=>error.code==='choose_seat');
+  a.join({id:'new',name:'Replacement'},r.code,r.players[1].id);assert.equal(r.players[1].id,'new');assert.deepEqual(r.totals,[16,16]);
   for(let i=2;i<=5;i++){a.start('a');for(const p of r.players)p.hand=[t(0,8)];a.finish(r,null,'stock');}
   assert.deepEqual(r.matchWinners,[0,1]);
 });
