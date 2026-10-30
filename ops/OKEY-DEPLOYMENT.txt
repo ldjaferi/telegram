@@ -365,3 +365,17 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   und caddy aktiv; healthz OK. sudo-Sperre nach beiden Schritten hergestellt.
 - Rückfallinstallation: /opt/okey-before-40d464a. Skripte:
   /home/debian/prepare-40d464a.sh und /home/debian/activate-40d464a.sh.
+
+30.10.2026 — Blitz als eigenes Aktionsmenü
+- Release 14308f5: Der Blitz an der bisherigen Brettwurf-Position öffnet
+  „Noch ein bisschen frech.“ mit Besa und „Fuge drasen“. Besa aus „Mehr“
+  entfernt. Weitere Aktionen können in derselben Menüliste ergänzt werden.
+- Brettwerfen bleibt eine bestätigte Aufgabe der Runde. Menü öffnen,
+  schliessen oder Abbrechen verändert den Spielzustand nicht.
+- Syntax und zwölf Chromium-Prüfungen bestanden, darunter neun Fenstergrössen,
+  erreichbare Menüpunkte, Escape/Fokusrückgabe, Besa und echter Brettwurf
+  erst nach Bestätigung. Hoch-/Querformat zusätzlich visuell geprüft.
+- Drei statische Dateien ohne Neustart installiert; laufende Tische erhalten.
+  HTTPS-Dateien bytegleich, healthz OK, drei Dienste aktiv, sudo wieder gesperrt.
+- Rückfallkopien: /home/debian/before-14308f5-{index.html,style.css,app.js};
+  Installationsskript: /home/debian/install-14308f5.sh.
