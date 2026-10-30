@@ -205,8 +205,9 @@ function renderSeats() {
   // Play runs counterclockwise: bottom -> right -> top -> left.
   for (const [position, offset] of [['right', 1], ['top', 2], ['left', 3]]) {
     const seatIndex = (Math.max(0, mine) + offset) % 4;
-    const p = room?.players[seatIndex] || (!room ? { name: ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'][offset - 1], bot: true, count: 14, preview: true } : null);
+    const p = room?.players[seatIndex];
     const seat = $(`#seat-${position}`);
+    seat.hidden = !room;
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
     seat.innerHTML = p ? `<div class="player-info"><button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? 'BOT · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div></div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
@@ -217,7 +218,7 @@ function renderCenter() {
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p>${teamChoiceMarkup()}<div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    $('#center').innerHTML = `<div class="lobby-intro"><p class="welcome-title">${esc(tableName(room.code))}</p>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p></div><div class="lobby-teams">${teamChoiceMarkup()}</div><div class="welcome-buttons lobby-actions"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {

@@ -1,4 +1,4 @@
-# OKEY — aber frech.
+# Gjurzi — aber frech.
 
 Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das bestehende Snake-Spiel; verwendet einen eigenen Prozess auf Port 3200. Keine Änderungen am Snake-Dienst notwendig.
 
@@ -17,7 +17,7 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 - Server entscheidet über Ziehen, Abwerfen und Gewinn; jeder Client erhält nur seine eigene Hand. Vollständige Partition in Reihen/Gruppen sowie sieben identische Paare, 12–13–1 erlaubt, 13–1–2 verboten.
 - Steine auf zwei Leisten frei ordnen: direkt mit Finger/Maus ziehen, per Antippen platzieren oder mit Pfeiltasten verschieben. Keine Überdeckung; andere Steine machen Platz. Passende Reihen, Farbgruppen und Paare rasten magnetisch zusammen und werden grün markiert. Ganze Kombinationen gemeinsam ziehen; einzelne Steine erst antippen, dann herausziehen. Lücken, Gruppen und Positionen bleiben pro Tisch/Runde erhalten, auch beim Formatwechsel. Sortieren ordnet das Brett neu.
 - Die Gewinnhand zeigt die tatsächlich passenden Reihen, Gruppen oder sieben Paare getrennt; echte Joker sind mit ihrem ersetzten Wert beschriftet.
-- Bildschirmfüllende Handyansicht: Querformat mit Tisch und Brett nebeneinander, Hochformat untereinander. Gesten, Bluff, Shisha und Brettwerfen stehen direkt als Symbolleiste auf dem Tisch. Mehr enthält zusätzliche Hinweise und Tisch verlassen.
+- Bildschirmfüllende Spielansicht: Auf schmalen oder niedrigen Querformat-Bildschirmen stehen Tisch und Brett nebeneinander, im Hochformat untereinander. Das Brett umfasst zwei Steinreihen mit kleinem Abstand; Tischsteine sind unabhängig davon grösser. Spieler sitzen ausserhalb des Filzes, ihre Abwürfe darauf. Die Symbolleiste für Gesten, Bluff, Shisha und Brettwerfen liegt zwischen Tisch und Brett. Mehr enthält zusätzliche Hinweise und Tisch verlassen. Startseite, Warteraum und Rundenergebnis haben eigene Bereiche ohne überlagerte Spieler.
 - Stinkefinger, Buj Modus, Furz und Çay als animierte Tischreaktionen. Buj Modus zeigt 🌚 und „Ihr sind alles Opfer und chömed i dhölll“. Gegner-Avatar auswählen für gezielte Gesten. 2,5 Sekunden Abklingzeit.
 - **Joker-Bluff:** Eigene Schaltfläche direkt auf dem Tisch. Nur mit einem aktuell gehaltenen Joker und während einer laufenden Runde; auch ausserhalb des eigenen Zugs. Alle sehen eine leicht behaarte, wackelnde Comic-Männerbrust mit „Ich hab einen Joker!“. Der Server prüft den Besitz eines festen Jokers. Keine Offenlegung der übrigen Hand und kein Verbrauch des Jokers. Acht Sekunden Pause zwischen Bluffs, reduzierte Bewegung wird berücksichtigt.
 - **Teamfragen:** In laufenden Teamrunden öffnet ein Klick auf den gegenüberliegenden menschlichen Teampartner „Was möchtest du … mitteilen?“. „A ta msheli“ bietet „Ja“, „Nein“, „Nein, se me Joker shkoj“; „Si je?“ bietet „Katastrof“, „Fort jam“, „Si tmundish mshile vlla“. Frage und Antwort sind ausschliesslich für diese zwei Spieler sichtbar, auch nach Wiederverbindung. Eine offene Frage pro Team, drei Sekunden Sendepause, 60 Sekunden Gültigkeit. Rundenende, Aufgeben und Verlassen beenden offene Fragen. Keine Nachrichten an Computer oder ausgeschiedene Spieler.
@@ -34,7 +34,7 @@ Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das 
 3. Alle Teilnehmer öffnen diesen Knopf. Der Link öffnet die Main Mini App und übergibt den Tisch automatisch; niemand muss einen Code eingeben. Der Gastgeber sieht die beitretenden Kollegen.
 4. Der Gastgeber wählt über **5 oder 7 Runden wählen** Spielweise und Rundenzahl und drückt **Runde starten**, sobald alle bereit sind. Maximal vier Menschen; freie Plätze werden erst beim Rundenstart mit Computern gefüllt.
 
-Weitere `/nisja` derselben Gruppe verweisen auf denselben Tisch. Während einer laufenden Runde können vorhandene Teilnehmer zurückkehren; neue Spieler können erst nach der Runde beitreten, sofern Plätze frei sind. Wer bereits an einem anderen Tisch sitzt, muss diesen zuerst verlassen. Ein Tisch wird nicht automatisch zwischen Gruppen geteilt. Nach dem Verlassen aller Menschen oder nach zwei Stunden Inaktivität kann `/nisja` einen neuen Tisch erstellen. Wie bisher gehen Tische bei einem Serverneustart verloren.
+Weitere `/nisja` derselben Gruppe verweisen auf denselben Tisch. Während einer laufenden Runde können vorhandene Teilnehmer zurückkehren; neue Spieler können erst nach der Runde beitreten, sofern Plätze frei sind. Wer bereits an einem anderen Tisch sitzt, muss diesen zuerst verlassen. Ein Tisch wird nicht automatisch zwischen Gruppen geteilt. Nach dem Verlassen aller Menschen oder nach zehn Minuten ohne erfolgreiche menschliche Spielaktion kann `/nisja` einen neuen Tisch erstellen. Wie bisher gehen Tische bei einem Serverneustart verloren.
 
 Vor dem Live-Einsatz: Main Mini App in BotFather aktivieren und den geänderten Okey-Dienst bereitstellen. Danach mit zwei echten Telegram-Konten in einer Gruppe prüfen: Gruppenknopf → gemeinsamer Tisch → Gastgeber startet. Die lokale Integration prüft Bot-Antwort, signierte Telegram-Anmeldung, WebSockets und den gemeinsamen Tisch; sie ersetzt diese Telegram-Geräteprüfung nicht.
 
@@ -83,13 +83,22 @@ Dies ist eine spielbare erste Version. Partien umfassen 5 oder 7 Runden, wahlwei
 
 Computer verwenden eine einfache Kombinationen-Heuristik ohne Einsicht in andere Hände. Sie prüfen Gewinnhände exakt, spielen aber nicht auf Expertenniveau. Die Gesten verwenden System-Emoji plus Animationen; das Joker-Motiv ist ein eigenes SVG.
 
-Tische, Sitzungen und die komplette Punktehistorie leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zwei Stunden. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
+Tische, Sitzungen und die komplette Punktehistorie leben im Prozessspeicher. Ein Neustart beendet laufende Partien. Inaktive Tische verfallen nach zehn Minuten; Computeraktionen verlängern diese Frist nicht. Ein Produktionsprozess unterstützt bis zu 100 Tische; noch kein Lasttest für diese Grenze und keine Synchronisierung zwischen mehreren Prozessen.
 
-Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Bluff, die Sperre nach einem Joker-Abwurf sowie Shishas und das Auflösen des Rauchs ab. 43 Tests bestehen lokal; vor der Bereitstellung werden sie zusätzlich auf dem VPS ausgeführt. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden geprüft. Echte Telegram-Geräte, Audio-Wiedergabe und Touch-Bedienung auf iOS/Android sind noch zu prüfen.
+51 Regel-, Server- und Interaktionstests sowie neun Chromium-Layoutprüfungen bestehen lokal. Letztere prüfen Startseite, Warteraum, Spiel, Ergebnis, lange Namen, Touch-Verschieben und Formatwechsel. Sie kontrollieren Überdeckungen, sichtbare Schaltflächen und die Bretthöhe. Öffentliches HTTPS, Bot-Menü, Produktionsanmeldung mit signierten Testdaten und WebSocket-Upgrade wurden ebenfalls geprüft. Die Browserprüfung ersetzt keinen Test in Telegram auf echten iOS-/Android-Geräten oder der Audio-Wiedergabe dort.
 
 ## Tests und Dateien
 
 `pnpm test` prüft Regeln, Joker, sieben Paare, unzulässige Gewinne, verdeckte Hände, Aufgeben, Turn-Reihenfolge, automatische Partien, zwei echte WebSocket-Clients, gezielte Gesten, Wiederverbindung und Anmeldeschranken. `pnpm check` prüft die JavaScript-Syntax.
+
+Die visuelle Layoutprüfung läuft separat mit Playwright und einem lokalen Testserver:
+
+```sh
+pnpm exec playwright install chromium
+pnpm test:layout
+```
+
+Alternativ einen vorhandenen Browser über `CHROMIUM_PATH=/usr/bin/chromium pnpm test:layout` verwenden. `LAYOUT_SCREENSHOT_DIR=/tmp/gjurzi-layout` speichert die Ansichten als PNG. Die neun Fenstergrössen reichen von 320×640 bis 1440×900, einschliesslich Tablet und Querformat. Playwright ist nur eine Entwicklungsabhängigkeit; Produktionsinstallationen benötigen keinen Browser.
 
 - `src/game.js`: Regel-Engine, Computer, Tische, persönliche Snapshots.
 - `src/server.js`: HTTP, Telegram-Login, einmalige Socket-Tickets, WebSocket-Nachrichten.
@@ -99,7 +108,5 @@ Die lokale Browserprüfung deckt Spielstart, Abwurf, Geste, Brettwurf, Joker-Blu
 - `deploy/okey.service`: Separate systemd-Vorlage.
 
 Grundlage mit ausdrücklich angepasster fester Joker-Regel: [Pagat – klassisches Okey](https://www.pagat.com/rummy/okey.html). Telegram: [Mini Apps](https://core.telegram.org/bots/webapps).
-
-Die Erweiterung um Teamwertung und Sortierung wurde lokal mit 43 automatisierten Tests sowie einer DOM-Prüfung gegen echte HTTP-/WebSocket-Verbindungen geprüft. Eine visuelle Browserprüfung war in der Cloud wegen des gesperrten Browser-Downloads nicht möglich; Handyansicht und Animation auf echten Telegram-Geräten bleiben zu prüfen.
 
 Die Rundenzahl wird vor einer neuen Partie über zwei grosse Auswahlfelder bestätigt. Es gibt keine automatische Vorauswahl; auch der Server verhindert einen Start ohne bestätigte Auswahl. Zwischen den Runden bleibt diese Wahl bestehen. Die wichtigen Texte und Bedienelemente sind für bessere Lesbarkeit auf Mobilgeräten vergrössert.

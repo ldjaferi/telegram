@@ -457,12 +457,6 @@ body .table .seat-top .mini-rack{display:none}
   body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:40px minmax(320px,1fr) minmax(194px,min(40%,calc(100% - 372px)))}
 }
 
-/* Use the spare rack height for upright tiles on portrait phones. */
-@media(max-width:600px) and (orientation:portrait){
-  body:is([data-stage=playing],[data-stage=finished]) #rack-tiles{
-    --tile-h:calc(min(var(--tile-w),var(--rack-fit-width,40px))*1.8);
-  }
-}
 
 /* Separate menu, felt, social actions and the private rack. */
 body.in-game .table-heading>div:first-child{display:none}
@@ -475,12 +469,12 @@ body main>#table-actions{position:relative;inset:auto;transform:none;grid-row:3;
 body main>#table-actions button{height:40px}
 body[data-stage=welcome] main>#table-actions,body[data-stage=lobby] main>#table-actions{display:none}
 @media(min-width:1001px) and (min-height:541px){
-  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(230px,1fr) 44px minmax(180px,min(40%,calc(100% - 354px)));gap:12px}
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(270px,1fr) 44px auto;gap:12px}
   body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-row:4}
   body[data-stage=playing] .table .center{bottom:20px}
 }
 @media(max-width:600px) and (orientation:portrait){
-  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(250px,1fr) 40px minmax(194px,min(40%,calc(100% - 352px)));gap:6px}
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(250px,1fr) 40px auto;gap:6px}
   body:is([data-stage=playing],[data-stage=finished]) .table{grid-template-rows:98px minmax(62px,1fr) 64px}
   body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-row:4}
   body .rack-meta #player-label{grid-column:1;grid-row:1;max-width:80px}
@@ -497,7 +491,7 @@ body[data-stage=welcome] main>#table-actions,body[data-stage=lobby] main>#table-
 
 /* Leave horizontal working space for arranging melds on portrait phones. */
 @media(max-width:600px) and (orientation:portrait){
-  body:is([data-stage=playing],[data-stage=finished]) #rack-tiles{
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{
     --tile-w:clamp(28px,8.2vw,36px);
     --tile-h:calc(var(--tile-w)*1.65);
   }
@@ -541,3 +535,116 @@ body:is([data-stage=playing],[data-stage=finished]) .table .tea-prop,body:is([da
 @media(min-width:1001px) and (min-height:541px) and (max-height:800px){body:is([data-stage=playing],[data-stage=finished]) .table{--head:70px}}
 body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .player-info{max-width:100%}
 body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .seat-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* The board has two tile-height rows, rather than a share of the viewport. */
+body:is([data-stage=playing],[data-stage=finished]) .rack-area{
+  grid-template-rows:auto calc(var(--tile-h)*2 + 32px) 44px;
+  height:auto;align-self:end;align-content:end;
+}
+body:is([data-stage=playing],[data-stage=finished]) #rack{
+  height:calc(var(--tile-h)*2 + 32px);min-height:0;padding:0;border-bottom-width:4px;
+}
+body:is([data-stage=playing],[data-stage=finished]) #rack-tiles{inset:8px 6px 12px}
+body:is([data-stage=playing],[data-stage=finished]) .rack-rail{height:4px}
+body:is([data-stage=playing],[data-stage=finished]) .rail-bottom{bottom:7px}
+body:is([data-stage=playing],[data-stage=finished]) #selection-hint{display:none}
+body:is([data-stage=playing],[data-stage=finished]) #rack .rack-engraving{display:none}
+
+/* Welcome and waiting rooms use normal document flow, with no demo players. */
+body:is([data-stage=welcome],[data-stage=lobby]) .table{
+  display:flex;flex-direction:column;min-height:0;overflow:auto;
+}
+body:is([data-stage=welcome],[data-stage=lobby]) .table .center{
+  position:relative;inset:auto;transform:none;width:min(540px,100%);max-width:none;
+  margin:auto;padding:24px 18px;flex-shrink:0;
+}
+body:is([data-stage=welcome],[data-stage=lobby]) .table .seat,
+body:is([data-stage=welcome],[data-stage=lobby]) .table .tea-prop,
+body:is([data-stage=welcome],[data-stage=lobby]) .table .shisha-prop,
+body:is([data-stage=welcome],[data-stage=lobby]) .table .table-wordmark{display:none}
+body:is([data-stage=welcome],[data-stage=lobby]) .welcome-buttons{flex-wrap:wrap;gap:12px}
+body[data-stage=welcome] .welcome-sub{display:block;font-size:15px;line-height:1.5;margin:12px 0 20px}
+body[data-stage=welcome] .welcome-buttons .button{min-height:44px;font-size:15px}
+body[data-stage=lobby] .team-picker{min-width:0}
+body[data-stage=lobby] .team-picker section{min-width:0}
+body[data-stage=lobby] .team-picker .button{white-space:normal;max-width:100%;overflow-wrap:anywhere}
+body[data-stage=lobby] .lobby-intro{overflow-wrap:anywhere}
+
+@media(orientation:portrait) and (min-width:601px) and (max-width:1000px){
+  body:is([data-stage=playing],[data-stage=finished]) main{
+    grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(270px,1fr) 40px auto;gap:10px;
+  }
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-column:1;grid-row:2}
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{grid-column:1;grid-row:4;--tile-w:48px;--tile-h:72px}
+  body:is([data-stage=playing],[data-stage=finished]) main>#table-actions{grid-column:1;grid-row:3}
+}
+
+@media(orientation:landscape) and (max-height:540px){
+  body[data-stage=lobby] .table .center{
+    display:grid;grid-template-columns:minmax(200px,.85fr) minmax(0,1.15fr);
+    column-gap:24px;row-gap:12px;width:min(900px,100%);padding:12px 20px;
+  }
+  body[data-stage=lobby] .lobby-intro{grid-column:1;grid-row:1;align-self:end}
+  body[data-stage=lobby] .lobby-intro>p:last-child{margin:10px 0 0;font-size:14px}
+  body[data-stage=lobby] .lobby-teams{grid-column:2;grid-row:1/3;align-self:center}
+  body[data-stage=lobby] .lobby-teams>p{font-size:13px;margin:10px 0 0}
+  body[data-stage=lobby] .team-picker p{font-size:14px;margin:10px 0}
+  body[data-stage=lobby] .lobby-actions{grid-column:1;grid-row:2;align-content:start}
+}
+
+/* A separate, larger size for the public table tiles. */
+body:is([data-stage=playing],[data-stage=finished]) .table{--public-tile-w:48px;--public-tile-h:66px;--discard-lane:60px}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat{
+  width:calc(var(--edge) + var(--discard-lane));grid-template-columns:var(--edge) var(--discard-lane);
+}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-right{grid-template-columns:var(--discard-lane) var(--edge)}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top{width:180px;grid-template-columns:1fr}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-discard{
+  --tile-w:var(--public-tile-w);--tile-h:var(--public-tile-h);align-self:start;
+}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-left,
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-right{top:clamp(calc(var(--head) + 8px),42%,calc(100% - 170px))}
+body[data-stage=playing] .table .piles{
+  --tile-w:var(--public-tile-w);--tile-h:var(--public-tile-h);
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:min(300px,100%);margin:auto;padding:0;align-items:start;
+}
+body[data-stage=playing] .table .pile-unit{min-width:0}
+body[data-stage=playing] .table .pile-button{min-width:0;min-height:var(--public-tile-h)}
+body[data-stage=playing] .table .pile-unit>span{font-size:11px;line-height:1.2;letter-spacing:0;margin-top:5px}
+body[data-stage=playing] .table .pile-unit.own-discard>span:first-child{margin-top:0}
+
+@media(max-width:600px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) .table{
+    --public-tile-w:clamp(32px,10vw,40px);--public-tile-h:calc(var(--public-tile-w)*1.4);--discard-lane:50px;
+  }
+  body:is([data-stage=playing],[data-stage=finished]) .rack-meta{min-height:48px}
+  body[data-stage=playing] .table .piles{gap:10px}
+  body[data-stage=playing] .table .pile-unit>span{font-size:10px}
+}
+/* Low landscape windows place the board alongside the table instead of flattening tiles. */
+@media(orientation:landscape) and (max-width:1000px), (orientation:landscape) and (max-height:720px){
+  body:is([data-stage=playing],[data-stage=finished]) main{
+    grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);
+    grid-template-rows:44px minmax(250px,1fr) 40px;gap:8px 12px;
+  }
+  body:is([data-stage=playing],[data-stage=finished]) .table-heading{grid-column:1/-1;grid-row:1}
+  body:is([data-stage=playing],[data-stage=finished]) .table{grid-column:1;grid-row:2;--edge:70px;--head:70px;--public-tile-w:36px;--public-tile-h:50px;--discard-lane:48px}
+  body:is([data-stage=playing],[data-stage=finished]) .rack-area{
+    grid-column:2;grid-row:2/4;--tile-w:clamp(28px,5vw,48px);--tile-h:calc(var(--tile-w)*1.5);
+  }
+  body:is([data-stage=playing],[data-stage=finished]) main>#table-actions{grid-column:1;grid-row:3}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat .avatar-button{width:30px;height:30px;font-size:20px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-name{font-size:10px}
+  body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-status{font-size:9px}
+  body[data-stage=playing] .table .piles{gap:10px}
+  body[data-stage=playing] .table .pile-unit>span{font-size:10px}
+}
+
+/* Round results get their own clear area instead of covering opponents. */
+body[data-stage=finished] .table{--edge:0px;--head:0px;display:flex;overflow:auto}
+body[data-stage=finished] .table .seat,body[data-stage=finished] .table .table-wordmark{display:none}
+body[data-stage=finished] .table .center{
+  position:relative;inset:auto;transform:none;width:min(640px,100%);max-width:none;
+  margin:auto;padding:20px 16px;flex-shrink:0;
+}
+body[data-stage=finished] .welcome-buttons{flex-wrap:wrap;gap:12px}
