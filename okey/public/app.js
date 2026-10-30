@@ -9,7 +9,7 @@ const apiUrl = path => new URL(path.replace(/^\//, ''), appBase);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const colors = ['Rot', 'Gelb', 'Blau', 'Schwarz'];
 // The code gives every guest the same name, including after reconnects.
-const tableNames = ['Te Ramizi', 'Te Fadili', 'Te Agroni', 'Te Iliri', 'Te Arbëni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ahmedi', 'Te Omari', 'Te Hasani', 'Te Khalidi', 'Te Jusufi', 'Te Karimi', 'Te Samiri', 'Te Tariku'];
+const tableNames = ['Te Besniku', 'Te Blerimi', 'Te Agroni', 'Te Iliri', 'Te Arbeni', 'Te Besimi', 'Te Dritani', 'Te Lulzimi', 'Te Ardiani', 'Te Gëzimi', 'Te Fatosi', 'Te Petriti', 'Te Flamuri', 'Te Burimi', 'Te Albani', 'Te Taulanti'];
 const tableName = code => tableNames[parseInt(code, 16) % tableNames.length];
 const faces = ['😎', '👨🏻', '👩🏻', '🧔🏻'];
 const gestureArt = { finger: '🖕', buj: '🌚', fart: '💨', tea: '☕' };
@@ -523,5 +523,5 @@ let tableKnocks = [];
 $('.table').addEventListener('click', e => {
   if(e.target.closest('button,a,input,.seat')) return;
   const now=Date.now(); tableKnocks=tableKnocks.filter(t=>now-t<1600);tableKnocks.push(now);
-  if(tableKnocks.length===3){tableKnocks=[];modal('<h2>E xhete ni bole te mqeft</h2><img src="egg.svg" alt="Zwei lustige Comic-Hoden" width="240" height="200"><button class="button primary" data-action="dismiss-message">Weiter spielen</button>');}
+  if(tableKnocks.length===3){tableKnocks=[];modal('<h2>E gjete një koqe!</h2><img src="egg.svg" alt="Zwei lustige Comic-Hoden" width="240" height="200"><button class="button primary" data-action="dismiss-message">Weiter spielen</button>');}
 });
