@@ -329,3 +329,19 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   drei Dienste aktiv und sudo-Sperre wiederhergestellt.
 - Rückfallkopie: /home/debian/before-e4874e1-app.js;
   Installationsskript: /home/debian/install-e4874e1.sh.
+
+30.10.2026 — Ramiz bringt Apfelsaft
+- Release c951bf5: Furz-Aktion durch „Ein Glas Apfelsaft“ ersetzt, mit
+  eigenem Glas-SVG und „Ramiz bringt euch einen Apfelsaft mit Ingwershot
+  vom Rewe Karaxha“. Einblendung 4,5 Sekunden; kurzer Glaston statt Furzton.
+- Bestehende Nachrichten-ID bleibt für laufende Räume kompatibel; Aktion
+  richtet sich an den ganzen Tisch, auch wenn ein Spieler ausgewählt war.
+- Ereignisebene liegt ausserhalb des isolierten Tisches, damit Brett und
+  Aktionsleiste die Meldungen auch im Querformat nicht verdecken.
+- Syntax und elf Chromium-Prüfungen bestanden. Vier verbundene menschliche
+  Testclients in vier Fenstergrössen: gleiche Nachricht, vollständig sichtbar,
+  verschwindet wieder; Stummschaltung und Glaston geprüft, keine Browserfehler.
+- Drei öffentliche Dateien ohne Neustart installiert, HTTPS bytegleich,
+  healthz OK, drei Dienste aktiv, sudo-Sperre wiederhergestellt.
+- Rückfallkopien: /home/debian/before-c951bf5-{index.html,style.css,app.js};
+  Installationsskript: /home/debian/install-c951bf5.sh.
