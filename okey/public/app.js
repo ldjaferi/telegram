@@ -217,7 +217,7 @@ function renderCenter() {
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p><p>Du bist dabei, ${esc(user.name)}!</p>${teamChoiceMarkup()}<div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    $('#center').innerHTML = `<p class="welcome-title">${esc(tableName(room.code))}</p>${room.owner === user.id ? '<button class="button primary" data-action="settings">5 oder 7 Runden wählen →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p>${teamChoiceMarkup()}<div class="welcome-buttons"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
     return;
   }
   if (room.status === 'finished') {
