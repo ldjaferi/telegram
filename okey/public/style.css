@@ -502,3 +502,42 @@ body[data-stage=welcome] main>#table-actions,body[data-stage=lobby] main>#table-
     --tile-h:calc(var(--tile-w)*1.65);
   }
 }
+
+/* Players sit outside the felt; only their discards extend onto the table. */
+body:is([data-stage=playing],[data-stage=finished]) .table{--edge:100px;--head:82px;display:block;padding:0;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible;container-type:normal;isolation:isolate}
+body:is([data-stage=playing],[data-stage=finished]) .table:before{content:'';position:absolute;inset:var(--head) var(--edge) 0;border:7px solid #795b3b;border-radius:42px;background:radial-gradient(ellipse,#35684f,#193e34);box-shadow:0 0 0 2px #c09b66,inset 0 0 15px #0005;z-index:-1;pointer-events:none}
+body:is([data-stage=playing],[data-stage=finished]) .table:after,body:is([data-stage=playing],[data-stage=finished]) .table-stitch{display:none}
+body:is([data-stage=playing],[data-stage=finished]) .table .table-wordmark{top:52%;font-size:clamp(24px,5vw,60px)}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat{position:absolute;display:grid;width:calc(var(--edge) + 52px);max-width:none;inset:auto;transform:none;grid-template-columns:var(--edge) 52px;gap:0;align-items:center}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-left{left:0;top:45%}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-right{right:0;top:45%;grid-template-columns:52px var(--edge)}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .player-info{grid-column:1;grid-row:1;min-width:0;padding:0 6px}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-right .player-info{grid-column:2}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .avatar-button{margin:0 auto 4px}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-name{white-space:normal;overflow-wrap:anywhere;font-size:12px}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-status{font-size:10px;margin-top:3px}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-discard{grid-column:2;grid-row:1;justify-self:center}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-right .seat-discard{grid-column:1}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top{left:50%;top:0;transform:translateX(-50%);width:180px;grid-template-columns:1fr;grid-template-rows:calc(var(--head) + 10px) auto}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .player-info{grid-column:1;grid-row:1;align-self:start}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .seat-discard{grid-column:1;grid-row:2}
+body[data-stage=playing] .table .center{position:absolute;inset:auto auto 12px 50%;transform:translateX(-50%);width:calc(100% - var(--edge)*2 - 16px);max-width:none}
+body:is([data-stage=playing],[data-stage=finished]) .table .tea-prop,body:is([data-stage=playing],[data-stage=finished]) .table .shisha-prop{display:none}
+@media(max-width:600px) and (orientation:portrait){
+ body:is([data-stage=playing],[data-stage=finished]) .table{--edge:74px;--head:70px}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat{width:calc(var(--edge) + 40px);grid-template-columns:var(--edge) 40px}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat-right{grid-template-columns:40px var(--edge)}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat-top{width:140px;grid-template-columns:1fr}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-name{font-size:10px}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-status{font-size:9px}
+ body[data-stage=playing] .table .piles{gap:12px}
+}
+@media(orientation:landscape) and (max-width:1000px), (orientation:landscape) and (max-height:540px){
+ body:is([data-stage=playing],[data-stage=finished]) .table{--edge:70px;--head:65px}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-name{font-size:10px}
+ body:is([data-stage=playing],[data-stage=finished]) .table .seat .seat-status{font-size:9px}
+ body[data-stage=playing] .table .piles{gap:10px}
+}
+@media(min-width:1001px) and (min-height:541px) and (max-height:800px){body:is([data-stage=playing],[data-stage=finished]) .table{--head:70px}}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .player-info{max-width:100%}
+body:is([data-stage=playing],[data-stage=finished]) .table .seat-top .seat-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
