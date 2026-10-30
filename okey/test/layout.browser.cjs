@@ -164,7 +164,10 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
       assertSeparate(g.textAndButtons,`${resultState}: result text and buttons overlap`);
       for(const item of g.textAndButtons)assert.ok(item.y>=g.felt.y&&item.bottom<=g.felt.bottom,`${resultState}: result inside table`);
       if(resultState==='joker')assert.match(await page.locator('.result-copy').innerText(),/E mshele me Joker/);
-      if(resultState==='match')assert.match(await page.locator('.result-winners').innerText(),/Kollege mit langem Namen.*Noch ein längerer Spielername/);
+      if(resultState==='match'){
+        assert.match(await page.locator('.result-winners').innerText(),/Kollege mit langem Namen.*Noch ein längerer Spielername/);
+        assert.match(await page.locator('.result-copy').innerText(),/Letzte Runde gewonnen: GastgeberMitLangemNamen/,'last round winner is distinguished from match winners');
+      }
       if(resultState==='tie')assert.equal(await page.locator('.result-quip').count(),0,'tie has no misleading victory line');
       await capture(page,viewport,resultState);
     }
