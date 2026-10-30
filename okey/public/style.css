@@ -673,3 +673,19 @@ body[data-stage=finished] .rack-meta,body[data-stage=finished] .play-actions{dis
   body[data-stage=finished] .rack-area{display:none}
   body[data-stage=finished] main>#table-actions{grid-column:1/-1}
 }
+
+.brand-block{display:flex;align-items:center;gap:16px;min-width:0}
+.brand-message{display:inline-flex;align-items:center;gap:7px;color:#d2decf;font-size:12px;font-weight:600;line-height:16px;white-space:nowrap;letter-spacing:.2px}
+.brand-message svg{display:block;width:24px;height:12px;flex-shrink:0;outline:1px solid #d2decf40}
+@media(max-width:1000px),(max-height:540px){
+  .shell{padding-top:28px}
+  .topbar,.in-game .topbar{left:max(8px,env(safe-area-inset-left));pointer-events:none}
+  .topbar .brand-block,.topbar .header-right{pointer-events:auto}
+  .topbar .brand-block{align-self:flex-start}
+  .topbar .header-right{transform:translateY(22px)}
+  .brand-message{font-size:11px;gap:6px}
+  .brand-message svg{width:22px;height:11px}
+}
+@media(max-width:600px) and (max-height:640px) and (orientation:portrait){
+  body:is([data-stage=playing],[data-stage=finished]) main{grid-template-rows:44px minmax(228px,1fr) 40px auto}
+}
