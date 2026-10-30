@@ -285,3 +285,14 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   sudo-Sperre jeweils wiederhergestellt.
 - Release-Rückfallkopie: /opt/okey-before-d550197-20261030T213608Z
   App-Text-Rückfallkopie: /home/debian/before-264d3d8-app.js
+
+30.10.2026 — Free Palestine am Logo live
+- Release c03f904: kleine palästinensische SVG-Flagge und „Free Palestine“
+  neben dem Logo; im kompakten Handy-Header als eigene schmale Zeile.
+- Elf Chromium-Prüfungen bestanden, inklusive neun Fenstergrössen und
+  kurzem Hochformat 375x600. Desktop und Handy zusätzlich visuell geprüft.
+- index.html und style.css ohne Dienstneustart installiert, Partien erhalten.
+  Öffentliche HTTPS-Dateien bytegleich, healthz OK, alle drei Dienste aktiv.
+  sudo-Sperre nach Installation wiederhergestellt.
+- Rückfallkopien: /home/debian/before-c03f904-index.html und
+  /home/debian/before-c03f904-style.css; Skript: /home/debian/install-c03f904.sh.
