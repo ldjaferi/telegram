@@ -265,3 +265,23 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - Bot-Menü und Browser-Einladungen verwenden die neue Domain automatisch.
   Main-Mini-App-URL in BotFather separat umstellen; bisherige URL wird
   weitergeleitet. Keine Browser-Verbindung zum Benutzer in dieser Sitzung.
+
+30.10.2026 — Namen beim Sieg, Kufiya-Filz und gesprochenes Klack live
+- Release d550197, Siegertext präzisiert in 264d3d8. Rundensieg mit Namen
+  und einem von 20 stabil gewählten Sprüchen; Gesamtsieg mit Mitgliedernamen.
+  Der Gewinner der letzten Runde wird separat vom Gesamtsieg genannt.
+- Originales SVG mit Netz-/Olivenblatt-Motiven einer palästinensischen Kufiya,
+  7,5 % Deckkraft über dem grünen Filz. Name, Zahlen und Bedienung bleiben lesbar.
+- Lokaler weiblicher deutscher Sprachclip „Klack!“ bei neuen Steinkontakten.
+  Kein Stimmenstapel, kein späteres Nachspielen; Mute und Hintergrund stoppen.
+  Kerstin/Piper, CC0-Dataset; Herkunft in public/ASSET-SOURCES.txt.
+- 60 Tests und Syntax lokal sowie auf VPS bestanden. Elf Chromium-Prüfungen
+  inklusive neun Fenstergrössen, Rundensieg/Joker/Gesamtsieg/Gleichstand,
+  Namenszuordnung und Dekodierung des Clips. Siegertext nochmals in allen
+  neun Grössen geprüft. Echte Handy-Audiowiedergabe bleibt vom Nutzer hörbar.
+- Alle sechs geänderten/neuen öffentlichen Dateien per HTTPS bytegleich;
+  abschliessende app.js ebenfalls geprüft. healthz OK; drei Dienste aktiv.
+- Release-Neustart beendete laufende Partien; letzte Textkorrektur ohne Neustart.
+  sudo-Sperre jeweils wiederhergestellt.
+- Release-Rückfallkopie: /opt/okey-before-d550197-20261030T213608Z
+  App-Text-Rückfallkopie: /home/debian/before-264d3d8-app.js
