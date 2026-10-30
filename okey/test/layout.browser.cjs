@@ -125,6 +125,16 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     assertPlaying(await geometry(page));
     await capture(page, viewport, 'playing');
 
+    await page.click('#fun-button');
+    const menu=await page.locator('#fun-dialog').boundingBox();
+    assert.ok(menu.x>=0&&menu.y>=0&&menu.x+menu.width<=viewport[0]&&menu.y+menu.height<=viewport[1],'action menu fits viewport');
+    const menuControls=await page.locator('#fun-dialog button').evaluateAll(buttons=>buttons.map(button=>{
+      const r=button.getBoundingClientRect();return button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));
+    }));
+    assert.ok(menuControls.every(Boolean),'every action menu control is visible and reachable');
+    assert.equal(room.players[0].out,false,'lightning opens the menu without throwing the board');
+    await capture(page,viewport,'action-menu'); await page.click('#close-fun');
+
     // Exercise the real touch handlers and verify the board still contains every tile.
     const tile = page.locator('#rack-tiles [data-tile]').first(), id = await tile.getAttribute('data-tile');
     await tile.tap();

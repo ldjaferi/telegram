@@ -34,10 +34,9 @@
       <div class="play-actions" id="play-actions"><span id="selection-hint">Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen</span><div><button id="discard" class="button secondary" disabled>Fuge gjurin ↗</button><button id="claim" class="button primary" disabled>Mshile ✦</button></div></div>
     </section>
     <section id="table-tools" aria-label="Gesten und Tischaktionen">
-      <div class="fun-tools"><button class="button secondary" data-gesture="besa" disabled>🤞 Besa! Ich habe keinen Joker!</button><p>Eine Bluff-Ansage an den ganzen Tisch.</p></div>
       <div class="bluff-bar"><button id="bluff" class="bluff-button" disabled><img src="bluff.svg" alt=""><span>Joker-Bluff<small>Ich hab da was …</small></span><span aria-hidden="true">✦</span></button><span id="bluff-hint">Eine Ansage an den ganzen Tisch.</span></div>
       <div class="shisha-bar"><button id="shisha" class="shisha-button" disabled><img src="shisha.svg" alt=""><span>Fester Zug<small>Einmal Nebel, bitte.</small></span><span aria-hidden="true">💨</span></button><span id="shisha-hint">Drei Sekunden Rauch für den ganzen Tisch.</span></div>
-    <section class="social-bar"><div class="social-heading"><span class="eyebrow">KLEINE GESTEN. GROSSES DRAMA.</span><span id="target-label">An den ganzen Tisch</span></div><div class="gestures"><button data-gesture="finger" title="Stinkefinger zeigen"><span>🖕</span><b>Mit Liebe</b></button><button data-gesture="buj" title="Buj Modus" aria-label="Buj Modus"><span>🌚</span><b>Buj Modus</b></button><button data-gesture="fart" title="Ein Glas Apfelsaft" aria-label="Ein Glas Apfelsaft"><span aria-hidden="true">🧃</span><b>Ein Glas Apfelsaft</b></button><button data-gesture="tea" title="Çay anbieten"><span>☕</span><b>Çay, abi?</b></button></div><button id="throw" class="throw-button" disabled><span>⌁</span><span>Brett fliegt.<small>Runde aufgeben</small></span>↗</button></section>
+    <section class="social-bar"><div class="social-heading"><span class="eyebrow">KLEINE GESTEN. GROSSES DRAMA.</span><span id="target-label">An den ganzen Tisch</span></div><div class="gestures"><button data-gesture="finger" title="Stinkefinger zeigen"><span>🖕</span><b>Mit Liebe</b></button><button data-gesture="buj" title="Buj Modus" aria-label="Buj Modus"><span>🌚</span><b>Buj Modus</b></button><button data-gesture="fart" title="Ein Glas Apfelsaft" aria-label="Ein Glas Apfelsaft"><span aria-hidden="true">🧃</span><b>Ein Glas Apfelsaft</b></button><button data-gesture="tea" title="Çay anbieten"><span>☕</span><b>Çay, abi?</b></button></div><button id="fun-button" title="Weitere Aktionen" aria-label="Weitere Aktionen" aria-haspopup="dialog" aria-controls="fun-dialog" aria-expanded="false" disabled><span aria-hidden="true">⚡</span></button></section>
     <footer><span>14 Steine. 4 Leute. 0 Anstand.</span><button id="leave" class="text-button" hidden>Tisch verlassen ↗</button><span class="footer-note">MIT EINER PRISE TÜRKISCHEM TEMPERAMENT.</span></footer>
     </section>
   </main>
@@ -46,6 +45,12 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="smoke-screen" class="smoke-screen" hidden><div class="smoke-haze" aria-hidden="true"></div><div class="smoke-clouds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="smoke-caption" role="status"><span aria-hidden="true">💨</span><strong id="smoke-who"></strong><span>Wer hat den Tisch weggeraucht?</span></div></div>
 <dialog id="tools-dialog" aria-labelledby="tools-title"><button id="close-tools" class="modal-close" aria-label="Zurück zum Spiel">×</button><h2 id="tools-title">Am Tisch</h2><div id="tools-content"></div></dialog>
+<dialog id="fun-dialog" aria-labelledby="fun-title"><button id="close-fun" class="modal-close" aria-label="Zurück zum Spiel">×</button><h2 id="fun-title">Noch ein bisschen frech.</h2>
+  <div class="fun-action-list">
+    <button class="button secondary fun-action" data-gesture="besa" aria-label="Besa" aria-describedby="besa-hint" disabled><span aria-hidden="true">🤞</span><span><b>Besa</b><small id="besa-hint">Ich habe keinen Joker!</small></span></button>
+    <button id="throw" class="button secondary fun-action" aria-label="Fuge drasen" aria-describedby="throw-hint" disabled><span aria-hidden="true">⌁</span><span><b>Fuge drasen</b><small id="throw-hint">Runde aufgeben und zuschauen</small></span></button>
+  </div>
+</dialog>
 <dialog id="modal"><button id="close-modal" class="modal-close" aria-label="Schliessen">×</button><div id="modal-content"></div></dialog>
 </body>
 </html>

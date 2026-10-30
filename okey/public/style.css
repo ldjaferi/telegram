@@ -153,10 +153,10 @@ body.in-game .lobby-code{margin:6px 0 10px}
 #table-actions{position:absolute;bottom:48px;left:50%;transform:translateX(-50%);width:min(440px,78%);display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;z-index:8}
 #table-actions button{display:flex;align-items:center;justify-content:center;margin:0;padding:5px;min-width:0;height:44px;border:1px solid #d2be8655;border-radius:8px;background:#163d31dd;color:#f1d6a5;box-shadow:0 2px 4px #0004;gap:0}
 #table-actions button>span{display:block;font-size:25px}
-#table-actions button b,#table-actions button small,#table-actions #bluff>span,#table-actions #shisha>span,#table-actions #throw>span:nth-child(2){display:none}
+#table-actions button b,#table-actions button small,#table-actions #bluff>span,#table-actions #shisha>span{display:none}
 #table-actions button img{width:32px;height:32px;object-fit:contain}
 #table-actions .nose-icon small{display:block;font-size:14px}
-#table-actions #throw{font-size:0}#table-actions #throw>span:first-child{display:block;font-size:28px}
+#table-actions #fun-button>span{font-size:26px}
 #table-actions button:hover:not(:disabled){background:#32604b;transform:translateY(-2px)}
 #table-actions button:disabled{filter:saturate(.45) brightness(.82)}
 #table-tools .bluff-bar,#table-tools .shisha-bar{margin:7px 0}
@@ -675,7 +675,17 @@ body[data-stage=finished] .rack-meta,body[data-stage=finished] .play-actions{dis
 }
 
 .brand-block{display:flex;align-items:center;gap:16px;min-width:0}
-.fun-tools{margin:8px 0 18px}.fun-tools .button{white-space:normal;min-height:44px;width:100%}.fun-tools p{font-size:12px;margin:6px 0}
+#fun-dialog{padding:28px 20px 20px;width:min(460px,92vw)}
+#fun-dialog h2{font-size:25px;padding-right:20px}
+.fun-action-list{display:grid;gap:12px}
+.fun-action-list>.button{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:12px;text-align:left;margin:0;padding:14px;min-height:72px;width:100%;white-space:normal}
+.fun-action>span:first-child{font-size:28px;text-align:center}
+.fun-action b{display:block;font-size:16px;line-height:1.3}
+.fun-action small{display:block;font-size:12px;line-height:1.4;font-weight:400;margin-top:4px}
+@media(orientation:landscape) and (max-height:540px){
+  #fun-dialog{width:min(640px,94vw);padding-top:22px}
+  .fun-action-list{grid-template-columns:1fr 1fr}
+}
 .result-fun{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:10px}
 .result-fun .button{padding:8px 12px;font-size:12px;min-height:36px}
 .tea-caption{font-size:12px;line-height:1.3;color:#dfcfa9;margin:8px 0 0;overflow-wrap:anywhere}
