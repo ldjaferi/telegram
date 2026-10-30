@@ -318,3 +318,14 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
   alle drei Dienste aktiv. sudo-Sperre wiederhergestellt.
 - Rückfallkopie: /home/debian/before-6ea57f7-app.js;
   Installationsskript: /home/debian/install-6ea57f7.sh.
+
+30.10.2026 — Albanische Tischnamen und korrigiertes Easter Egg
+- Release e4874e1: 16 albanische Tischnamen, unter anderem Te Arbeni,
+  Te Iliri und Te Dritani. Dreimal Klopfen zeigt „E gjete një koqe!“.
+- Syntax geprüft. Browserprüfung bei 375x600 und 1440x900: Klopfen öffnet
+  den passenden Text samt Bild, Dialog passt ins Fenster und schliesst;
+  Tischname in Lobby und Kopfzeile stimmt überein, Einladung verfügbar.
+- app.js ohne Neustart installiert; HTTPS-Datei bytegleich, healthz OK,
+  drei Dienste aktiv und sudo-Sperre wiederhergestellt.
+- Rückfallkopie: /home/debian/before-e4874e1-app.js;
+  Installationsskript: /home/debian/install-e4874e1.sh.
