@@ -1,0 +1,38 @@
+goyim.xhaferi.al {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        -Server
+    }
+    request_body {
+        max_size 16KB
+    }
+    @gjurzi_root path /okey /gjurzi
+    handle @gjurzi_root {
+        redir https://gjurzi.xhaferi.al/?{query} 308
+    }
+    @gjurzi_legacy path /okey/* /gjurzi/*
+    handle @gjurzi_legacy {
+        route {
+            uri strip_prefix /okey
+            uri strip_prefix /gjurzi
+            redir https://gjurzi.xhaferi.al{uri} 308
+        }
+    }
+    handle {
+        reverse_proxy 127.0.0.1:3100
+    }
+    # Do not log raw socket-ticket query strings.
+}
+gjurzi.xhaferi.al {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        -Server
+    }
+    request_body {
+        max_size 16KB
+    }
+    reverse_proxy 127.0.0.1:3200
+    # Do not log raw socket-ticket query strings.
+}

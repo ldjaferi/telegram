@@ -242,3 +242,26 @@ Zugzeit auf ausdrücklichen Wunsch auf 120 Sekunden erhöht:
 - Rückfallkopien: /home/debian/before-1143fb3-app.js und
   /home/debian/before-1143fb3-style.css. Installationsskript:
   /home/debian/install-gjurzi-1143fb3.sh.
+
+30.10.2026 — Computerplatz-Übernahme und eigene Subdomain live
+- Spiel-Release 0d6c7c1: neue Menschen wählen einen Computerplatz auch während
+  der Runde. Hand, Team, Punkte und Zugphase bleiben erhalten; aktuelle Züge
+  bekommen ein volles Zeitfenster. Keine verdeckten Hände in der Platzvorschau.
+  Menschen und bereits aufgegebene Plätze sind nicht übernehmbar.
+- 58 Tests lokal und auf VPS; elf Chromium-Prüfungen inklusive Einladungen
+  über Browser/Telegram-Startparameter, konkurrierender Auswahl und Reconnect.
+- Release-Rückfallverzeichnis: /opt/okey-before-0d6c7c1-20261030T205309Z
+- Neue öffentliche URL: https://gjurzi.xhaferi.al/ (PUBLIC_URL ohne Unterpfad).
+  DNS zeigt auf 91.214.190.222, HTTPS-Zertifikat von Caddy aktiv.
+  goyim.xhaferi.al/okey und /gjurzi leiten mit Tischcode weiter, auch ohne
+  abschliessenden Slash. Snake bleibt unter goyim.xhaferi.al auf Port 3100.
+- Domain-Rückfallkopie für Caddy und Dienstkonfiguration:
+  /root/gjurzi-domain-before-20261030T205448Z
+- HTTPS-Dateien mit installierten Dateien verglichen; echte öffentliche
+  Anmeldung, WebSockets, Computerplatzwahl und Übernahme erfolgreich geprüft.
+  Temporärer Testtisch danach entfernt. Alle drei Dienste aktiv.
+- Code- und Domainwechsel benötigten je einen Neustart von okey; bestehende
+  Partien wurden dabei beendet. sudo-Sperre jeweils wiederhergestellt.
+- Bot-Menü und Browser-Einladungen verwenden die neue Domain automatisch.
+  Main-Mini-App-URL in BotFather separat umstellen; bisherige URL wird
+  weitergeleitet. Keine Browser-Verbindung zum Benutzer in dieser Sitzung.

@@ -35,7 +35,7 @@ if ids is None:
 if not ids and old.get('ALLOW_PUBLIC_PLAY')!='true':
     raise SystemExit('Keine zugelassenen Spieler konfiguriert.')
 p=Path('/etc/okey/config')
-p.write_text('NODE_ENV=production\nHOST=127.0.0.1\nPORT=3200\nPUBLIC_URL=https://goyim.xhaferi.al/okey\nBOT_USERNAME=GoyimGjurzi_bot\nBOT_OFFSET_PATH=/var/lib/okey/bot-offset\nALLOWED_TELEGRAM_IDS='+ids+'\nALLOW_PUBLIC_PLAY='+old.get('ALLOW_PUBLIC_PLAY','false')+'\n')
+p.write_text('NODE_ENV=production\nHOST=127.0.0.1\nPORT=3200\nPUBLIC_URL=https://gjurzi.xhaferi.al\nBOT_USERNAME=GoyimGjurzi_bot\nBOT_OFFSET_PATH=/var/lib/okey/bot-offset\nALLOWED_TELEGRAM_IDS='+ids+'\nALLOW_PUBLIC_PLAY='+old.get('ALLOW_PUBLIC_PLAY','false')+'\n')
 p.chmod(0o600)
 # Apply the existing bot egress restrictions to the separate Okey account.
 p=Path('/etc/nftables.conf'); text=p.read_text()
@@ -55,26 +55,28 @@ systemctl daemon-reload
 systemctl enable okey
 systemctl restart okey
 for attempt in $(seq 1 20); do
-    if curl --silent --fail http://127.0.0.1:3200/okey/healthz >/dev/null; then break; fi
+    if curl --silent --fail http://127.0.0.1:3200/healthz >/dev/null; then break; fi
     sleep 1
 done
-curl --silent --fail http://127.0.0.1:3200/okey/healthz
+curl --silent --fail http://127.0.0.1:3200/healthz
 python3 - <<'PY'
 from pathlib import Path
 p=Path('/etc/caddy/Caddyfile'); text=p.read_text()
-if 'reverse_proxy 127.0.0.1:3200' not in text:
-    anchor='    reverse_proxy 127.0.0.1:3100'
-    if text.count(anchor)!=1: raise SystemExit('Caddy-Struktur unerwartet.')
-    replacement='''    @okey path /okey /okey/*
-    handle @okey {
-        reverse_proxy 127.0.0.1:3200
-    }
-    handle {
-        reverse_proxy 127.0.0.1:3100
-    }'''
-    Path('/etc/caddy/Caddyfile.okey-staged').write_text(text.replace(anchor,replacement))
-else:
-    Path('/etc/caddy/Caddyfile.okey-staged').write_text(text)
+# Preserve unrelated sites and settings; migrate only the known game route.
+template=Path('deploy/Caddyfile').read_text()
+legacy=template[template.index('    @gjurzi_root'):template.index('    handle {')]
+new_site=template[template.index('\ngjurzi.xhaferi.al {'):]
+if 'gjurzi.xhaferi.al {' not in text:
+    old_route='    @okey path /okey /okey/*\n    handle @okey {\n        reverse_proxy 127.0.0.1:3200\n    }\n'
+    if text.count(old_route)==1:
+        text=text.replace(old_route,legacy)
+    else:
+        anchor='    reverse_proxy 127.0.0.1:3100'
+        if text.count(anchor)!=1 or '127.0.0.1:3200' in text:
+            raise SystemExit('Caddy-Struktur unerwartet. Neue Subdomain anhand deploy/Caddyfile einrichten.')
+        text=text.replace(anchor,legacy+'    handle {\n        reverse_proxy 127.0.0.1:3100\n    }')
+    text=text.rstrip()+new_site
+Path('/etc/caddy/Caddyfile.okey-staged').write_text(text)
 PY
 caddy validate --config /etc/caddy/Caddyfile.okey-staged --adapter caddyfile
 install -m 0644 /etc/caddy/Caddyfile.okey-staged /etc/caddy/Caddyfile

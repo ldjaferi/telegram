@@ -2,7 +2,7 @@
 
 Eigenständige Telegram Mini App für Okey mit festen Jokern. Gehört neben das bestehende Snake-Spiel; verwendet einen eigenen Prozess auf Port 3200. Keine Änderungen am Snake-Dienst notwendig.
 
-**Live seit 28.10.2026:** [@GoyimGjurzi_bot](https://t.me/GoyimGjurzi_bot) · [Weboberfläche](https://goyim.xhaferi.al/okey/). Im privaten Bot-Chat `/start` oder `/nisja` senden und „Okey spielen“ antippen. Die Telegram-Anmeldung benötigt den Start über den Bot. `/play` bleibt als zusätzlicher Befehl kompatibel; im Befehlsmenü steht `/nisja`.
+**Live seit 28.10.2026:** [@GoyimGjurzi_bot](https://t.me/GoyimGjurzi_bot) · [Weboberfläche](https://gjurzi.xhaferi.al/). Im privaten Bot-Chat `/start` oder `/nisja` senden und „Gjurzi spielen“ antippen. Im Browser ist auch eine Anmeldung mit frei gewähltem Namen möglich, wenn öffentliche Partien freigegeben sind. `/play` bleibt als zusätzlicher Befehl kompatibel; im Befehlsmenü steht `/nisja`.
 
 ## Enthalten
 
@@ -53,25 +53,13 @@ Alternativ `npm install`, `npm test`, `npm start`. Es gibt keinen Build-Schritt.
 ## Eigenen Server und Telegram verbinden
 
 1. Das vollständige Verzeichnis `okey/` nach `/opt/okey` kopieren und dort `pnpm install --prod --frozen-lockfile` ausführen. Node 24 vorausgesetzt.
-2. Eine HTTPS-Adresse über den bestehenden Reverse Proxy auf `127.0.0.1:3200` zeigen lassen. `PUBLIC_URL` darf einen Unterpfad enthalten. Aktuell läuft Okey unter `https://goyim.xhaferi.al/okey`; der Proxy leitet `/okey` und `/okey/*` ohne Entfernen des Präfixes weiter. Caddy übernimmt WebSocket-Upgrades automatisch.
+2. Eine HTTPS-Adresse über den bestehenden Reverse Proxy auf `127.0.0.1:3200` zeigen lassen. `PUBLIC_URL` darf einen Unterpfad enthalten. Aktuell läuft Gjurzi direkt unter `https://gjurzi.xhaferi.al/`; der Proxy leitet die Anfragen unverändert an Port 3200 weiter. Die alten Pfade `/okey` und `/gjurzi` auf `goyim.xhaferi.al` leiten mit erhaltenem Tischcode auf die neue Subdomain um. Caddy übernimmt WebSocket-Upgrades automatisch.
 3. `.env.example` als `/etc/okey/config` speichern. `PUBLIC_URL`, `BOT_USERNAME` (ohne @) und `ALLOWED_TELEGRAM_IDS` setzen. Standardmässig sind nur eingetragene Telegram-IDs zugelassen. `ALLOW_PUBLIC_PLAY=true` erlaubt bewusst alle Telegram-Konten.
 4. Den neuen Bot-Token ausschliesslich auf dem Server in `/etc/okey/bot-token` speichern (root, 0600). `deploy/okey.service` verwendet systemd `LoadCredential`. Der Token wird für die Prüfung der Telegram-Anmeldung gebraucht, nicht an Browser ausgegeben.
-5. In **@BotFather → /mybots → @GoyimGjurzi_bot → Bot Settings → Configure Mini App** die **Main Mini App** aktivieren und `https://goyim.xhaferi.al/okey/` als URL setzen. Dies ist für den direkten Gruppenstart erforderlich und wird nicht durch `setChatMenuButton` eingerichtet. Der Dienst setzt Menüknopf, Beschreibung und `/nisja`, `/help`, `/id` automatisch. Einladungen verwenden `https://t.me/BOT_USERNAME?startapp=room_ABCDEF`. Telegram kann beim ersten Öffnen eine Bestätigung anzeigen; der Umweg über den privaten Bot-Chat entfällt. Alte `?start=room_ABCDEF`-Einladungen bleiben kompatibel.
+5. In **@BotFather → /mybots → @GoyimGjurzi_bot → Bot Settings → Configure Mini App** die **Main Mini App** aktivieren und `https://gjurzi.xhaferi.al/` als URL setzen. Dies ist für den direkten Gruppenstart erforderlich und wird nicht durch `setChatMenuButton` eingerichtet. Der Dienst setzt Menüknopf, Beschreibung und `/nisja`, `/help`, `/id` automatisch. Einladungen verwenden `https://t.me/BOT_USERNAME?startapp=room_ABCDEF`. Telegram kann beim ersten Öffnen eine Bestätigung anzeigen; der Umweg über den privaten Bot-Chat entfällt. Alte `?start=room_ABCDEF`-Einladungen bleiben kompatibel.
 6. Den Dienst nach Prüfung der Pfade installieren und starten. `/healthz` liefert den Status. Danach mit echten Telegram-Konten auf iOS und Android testen.
 
-Aktuelle Aufteilung im vorhandenen Caddy-Site-Block:
-
-```caddy
-goyim.xhaferi.al {
-    @okey path /okey /okey/*
-    handle @okey {
-        reverse_proxy 127.0.0.1:3200
-    }
-    handle {
-        reverse_proxy 127.0.0.1:3100
-    }
-}
-```
+Die vollständige VPS-Konfiguration steht in [deploy/Caddyfile](deploy/Caddyfile). `gjurzi.xhaferi.al` geht an Port 3200, das bestehende Snake-Spiel auf `goyim.xhaferi.al` weiterhin an Port 3100. Die Subdomain benötigt einen DNS-Eintrag auf denselben Server. Caddy beschafft und erneuert das HTTPS-Zertifikat. Alte Spiel-Links behalten bei der Weiterleitung ihren Tischcode. Die Main-Mini-App-URL muss separat in BotFather auf `https://gjurzi.xhaferi.al/` gesetzt werden; das Bot-Menü und neue Browser-Einladungen verwenden `PUBLIC_URL`.
 
 Der systemd-Dienst verwendet den separaten Systembenutzer `okey` und die vorhandene Node-Runtime `/opt/node24/bin/node`. Code liegt root-eigen unter `/opt/okey`, der Polling-Stand unter `/var/lib/okey/bot-offset`. Token und Konfiguration liegen root-eigen mit 0600 in `/etc/okey` (0700). Die bestehende Egress-Firewall gilt auch für Okey. Port 3200 bleibt ausschliesslich an Loopback gebunden.
 
