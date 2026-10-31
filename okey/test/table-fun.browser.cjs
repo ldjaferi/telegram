@@ -70,6 +70,19 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     assert.deepEqual(room.players[0].hand,hand); await capture(host,'besa');
     await Promise.all(pages.map(p=>p.evaluate(()=>document.querySelector('#table-event').replaceChildren())));
 
+    const bujHeard = new Set();
+    for (let i=0; i<3; i++) {
+      room.players[0].lastGesture=-Infinity;
+      for(let n=0;n<20;n++)app.arena.event(room,'draw',{player:room.players[0].id});
+      await host.locator('[data-gesture=buj]').click();
+      await Promise.all(pages.map(p=>p.waitForSelector('.buj-mode')));
+      const line=room.events.at(-1).line;
+      assert.ok(!bujHeard.has(line),'Buj does not repeat when other actions advance the event sequence');
+      bujHeard.add(line);
+      for(const p of pages)assert.equal(await p.locator('.buj-mode .event-copy').innerText(),line,'all players see the server-selected Buj line');
+      await Promise.all(pages.map(p=>p.evaluate(()=>document.querySelector('#table-event').replaceChildren())));
+    }
+
     await host.locator('#rack-tiles .tile').first().click(); await host.click('#claim');
     await host.waitForSelector('.invalid-claim');
     assert.deepEqual(await host.evaluate(()=>window.testTones),[],'muted invalid claim is silent');

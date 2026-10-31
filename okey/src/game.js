@@ -2,13 +2,27 @@ import { BOT_LEVELS, analyseHand, chooseDiscard } from './bot-strategy.js';
 import { randomInt, randomBytes } from 'node:crypto';
 import { TEAM_QUESTIONS, TEAM_MESSAGE_MS } from '../public/team-chat.js';
 import { bestCombinations } from '../public/combinations.js';
-import { canMakeExcuse, excuseLines } from '../public/table-fun.js';
+import { bujLines, canMakeExcuse, excuseLines } from '../public/table-fun.js';
 
 export const GESTURES = ['finger', 'buj', 'fart', 'tea', 'besa', 'excuse'];
 export const BLUFF_COOLDOWN_MS = 8000;
 export const SMOKE_DURATION_MS = 3000;
 export const SHISHA_COOLDOWN_MS = 15000;
 const BOT_NAMES = ['Onkel Cengiz', 'Tante Leyla', 'Çay-König'];
+// Shuffle once per table, then rotate only on accepted Buj gestures. This
+// guarantees every other line is heard before one returns, even across rounds.
+function nextBujLine(room) {
+  if (!room.bujRotation) {
+    room.bujRotation = [...bujLines];
+    for (let i = room.bujRotation.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [room.bujRotation[i], room.bujRotation[j]] = [room.bujRotation[j], room.bujRotation[i]];
+    }
+  }
+  const line = room.bujRotation.shift();
+  room.bujRotation.push(line);
+  return line;
+}
 export function deck() {
   const tiles = [];
   for (let copy = 0; copy < 2; copy++) for (let color = 0; color < 4; color++)
@@ -338,7 +352,7 @@ export class Arena {
     const lines = gesture === 'excuse' ? excuseLines(r.mode) : null;
     if (gesture==='tea') this.funCount(r,p,'tea');
     p.lastGesture = this.now(); this.event(r, 'gesture', { player: id, name: p.name, gesture, target: target || null,
-      ...(lines ? { line: lines[randomInt(lines.length)] } : {}) });
+      ...(gesture === 'buj' ? { line: nextBujLine(r) } : lines ? { line: lines[randomInt(lines.length)] } : {}) });
   }
   bluff(id) {
     const r = this.roomFor(id), p = r?.players.find(p => p.id === id);

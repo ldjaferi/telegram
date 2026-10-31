@@ -1,34 +1,11 @@
 import { installHostTools } from './host-tools.js';
 const botLevelLabels = { fmi: 'Si fmi', bur: 'Si bur', baba: 'Si Baba' };
-const bujLines = [
-  "Ihr sind alles Opfer und chömed i dhölll",
-  "Ich gang uf sBoot. I nim keine mit",
-  "dBrocki hät gad 50% Rabatt",
-  "Ich chum grad. Muess nur no churz is Brocki.",
-  "Für euch hät sBoot leider kei Platz.",
-  "50 Prozent Rabatt. Ich han trotzdem verhandlet.",
-  "Ich ha kei Joker. Ich ha Beziehige.",
-  "Spieled wiiter. Ich lueg schnell uf Ricardo.",
-  "Wer verlürt, zahlt sBenzin fürs Boot.",
-  "Ihr chönd mit ufs Boot. Aber schwümme müend ihr sälber.",
-  "Ich gib eine us. Aber mir teiled sGlas.",
-  "De Çay isch gratis. S’heisse Wasser choschtet.",
-  "Ich bi nöd geizig. Ihr sind eifach z’tüür.",
-  "Chömed ruhig verbii. Ich bi denn nöd dihei.",
-  "Ich gönn eu alles. Solang ich’s nöd zahle.",
-  "dBrocki hät 50 Prozent. Ich frag, öb no öppis gaht.",
-  "Ich ha eu öppis mitbracht. D’Quittig, zum Teile.",
-  "Ihr sind mini beschte Fründe. Aber fasst mini Snacks nöd aa.",
-  "Ich lade eu zum Znacht ii. Ässed vorher no öppis.",
-  "Wer gwünnt, zahlt de Çay. Ich verlür us Prinzip.",
-  "Ich vermiss eu scho. Aber bliibed no chli det."
-];
 import { TEAM_QUESTIONS } from './team-chat.js';
 import { bestCombinations } from './combinations.js';
 import { winningGroups } from './melds.js';
 import { TableMusic, shishaBubbles, TileClack } from './music.js';
 import { FreeRack } from './rack.js';
-import { canMakeExcuse, teaBill } from './table-fun.js';
+import { bujLines, canMakeExcuse, teaBill } from './table-fun.js';
 const $ = s => document.querySelector(s);
 const appBase = new URL('.', document.baseURI);
 const apiUrl = path => new URL(path.replace(/^\//, ''), appBase);
@@ -519,7 +496,7 @@ function showEvent(event) {
       return;
     }
     if (event.gesture === 'buj') {
-      $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">${esc(bujLines[Number(event.seq || 0) % bujLines.length])}</span><small>${esc(event.name)}</small></div>`;
+      $('#table-event').innerHTML = `<div class="event-card buj-mode"><span class="event-emoji" aria-hidden="true">🌚</span><strong>Buj Modus</strong><span class="event-copy">${esc(event.line ?? bujLines[Number(event.seq || 0) % bujLines.length])}</span><small>${esc(event.name)}</small></div>`;
       eventTimer = setTimeout(() => { $('#table-event').replaceChildren(); }, 4500);
       return;
     }

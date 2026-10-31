@@ -84,3 +84,27 @@ test('Denkmeister happens once after 45 seconds per human turn, never for bots o
   room.players[2].bot = true; room.botAt = Infinity; now += 45000; arena.tick(); assert.equal(thinkers().length, 2);
   room.players[2].bot = false; now = room.deadline; arena.tick(); assert.equal(thinkers().length, 2);
 });
+
+test('Buj uses every line before repeating, independent of other events, rounds and callers', async () => {
+  const { bujLines } = await import('../public/table-fun.js');
+  let now = 1000; const { arena, room } = table('teams', () => now), heard = [];
+  assert.equal(new Set(bujLines).size, bujLines.length);
+  for (let i = 0; i < bujLines.length * 3; i++) {
+    const caller = room.players[i % 4].id;
+    now += 2500; arena.gesture(caller, 'buj');
+    const event = room.events.at(-1);
+    assert.ok(bujLines.includes(event.line));
+    assert.ok(!heard.slice(-(bujLines.length - 1)).includes(event.line), 'a line cannot repeat among the most recent twenty');
+    for (const p of room.players) assert.equal(arena.snapshot(room, p.id).events.at(-1).line, event.line);
+    heard.push(event.line);
+    const rotation = [...room.bujRotation];
+    assert.throws(() => arena.gesture(caller, 'buj'), /Luft/);
+    assert.deepEqual(room.bujRotation, rotation, 'rejected gestures do not consume a line');
+    // Twenty unrelated events reproduced the former seq % 21 repetition.
+    for (let n = 0; n < 20; n++) arena.event(room, 'puff', { player: 'a', name: 'Arben' });
+    if (i === 7) { arena.finish(room, room.players[0], 'melds'); arena.start('a'); }
+    assert.equal(arena.snapshot(room, caller).bujRotation, undefined);
+  }
+  for (let start = 0; start < heard.length; start += bujLines.length)
+    assert.deepEqual(new Set(heard.slice(start, start + bujLines.length)), new Set(bujLines));
+});
