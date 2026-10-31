@@ -424,3 +424,31 @@ Steine aus Kombis herauslösen – vorbereitet am 31.10.2026:
   dokumentiertes SSH ist auf den Anschluss des Benutzers eingeschränkt.
 - Beim Wiederverbinden zuerst Live-Dateien mit den erwarteten Hashes abgleichen.
   Mit Rückfallkopie statisch installieren; kein Spielserver-Neustart erforderlich.
+
+Buj-Wiederholungen und Offline-Mitspieler – vorbereitet am 31.10.2026:
+- Code 2b13876 / e9400d5 auf main, weiterhin NICHT auf dem VPS eingespielt.
+- Spiel-Buj: 21 bestehende Sprüche pro Tisch einmal mischen und zyklisch
+  verwenden. Nur angenommene Buj-Aktionen bewegen den Zeiger; andere Ereignisse,
+  wechselnde Spieler und Rundengrenzen verursachen keine frühen Wiederholungen.
+  Der Server liefert allen Spielern denselben ausgewählten Text.
+- Telegram-Buj hat eine separate Liste mit acht Sprüchen; hier steht auch
+  „Ich han nöd verlore. Ich han eu Motivation gspendet.“ /buj und der Menüknopf
+  teilen sich nun eine Rotation pro Gruppe, gespeichert in den bestehenden
+  Social-Daten. Nach einem Neustart wird fortgesetzt; fehlgeschlagener Versand
+  verbraucht keinen Spruch. Gruppen beeinflussen sich nicht gegenseitig.
+- Host-Menü berücksichtigt nun connected-Änderungen sofort, zählt Offline-Plätze,
+  zeigt sie zuerst mit „Offline · Platz reserviert“ und stellt Entfernen voran.
+  Öffnen eines Menübereichs scrollt seinen Inhalt in den sichtbaren Bereich.
+- Bestehendes Verhalten unverändert: Verbindung verlieren reserviert den Platz
+  zum Wiederverbinden. Nur der Gastgeber darf nach Bestätigung entfernen;
+  dann übernimmt ein Bot Hand/Platz/Punkte. Wiedereintritt in diese Partie gesperrt.
+- 87 Spiel-/Server-/Modultests und 17 Chromium-Browsertests bestanden;
+  relevante Buj-/Offline-Browsertests nach Telegram-Ergänzung nochmals bestanden.
+  Telegram-Versand nur mit Stub getestet; keine echten Chatnachrichten versendet.
+- Kombiniertes Paket: artifacts/gjurzi-update-e9400d5.tar.gz. Enthält auch die
+  noch offene Stein-Verbesserung 9de8015: fünf Public-Dateien, src/game.js,
+  src/social.js und Manifest mit alten/neuen Hashes (inkl. Live-CRLF-Quellstand).
+- Blocker: Remote Commander meldet ov-c992dc weiterhin offline, zuletzt 17h.
+  Vor Installation aktuellen Serverstand vergleichen und Rückfallkopie erstellen.
+  Dieses kombinierte Update benötigt nun einen Neustart NUR von okey.service;
+  dadurch enden laufende Tische. gamebot und caddy nicht neu starten.
