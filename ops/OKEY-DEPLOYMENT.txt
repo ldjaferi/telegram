@@ -542,3 +542,29 @@ Auf Freunde warten statt automatisch Bots starten – LIVE am 31.10.2026:
   Befehlsperren vollständig wiederhergestellt und erneut abgeglichen.
 - Differenzpaket artifacts/gjurzi-update-d8589c2.json.gz;
   SHA256 71585a3c749b869b7b242f8f8986c91db814ae3ae1a1ff9086a8459af2a7b0d2.
+
+Zahlensortierung und nur freie Steine – LIVE am 31.10.2026:
+- Release 028ee92 auf main und https://gjurzi.xhaferi.al/.
+- Brettleiste enthält Farbe, Zahlen, Kombis und Checkbox „Nur freie“.
+  Zahlen aufsteigend, bei gleichem Wert nach Farbe, Joker am Ende.
+  Nur-freie-Präferenz wird im Browser gespeichert; standardmässig ausgeschaltet.
+- Bei aktivierter Option bleiben bestehende grün markierte Reihen, Gruppen,
+  Joker-Kombis und Paare exakt an ihren Positionen. Nur übrige Steine werden
+  in verfügbare Lücken sortiert. Neue Kombis bleiben zusammen, sofern eine Lücke
+  dafür reicht; andernfalls werden sie verteilt, ohne bestehende Kombis zu bewegen.
+- Gültige Brettpositionen werden bei unveränderten Abmessungen nicht bei jeder
+  Serveraktualisierung neu gepackt. Resize/neue Steine nutzen weiter die
+  kollisionsfreie Anordnung. Auswahl wird beim Sortieren aufgehoben.
+- Sortier-Toast mit Kombizahl/Restpunkten entfernt. Das Aktionsmenü ausgewählter
+  Steine weicht unter den Stein aus, wenn es sonst die Sortierleiste überdeckt.
+- 89 Modul-/Servertests und 15 relevante Chromium-Browsertests bestanden.
+  Darunter feste Kombis mit Joker/Paaren, volle Bretter, 100 Sortier-/Zugfolgen,
+  Wiederladen, Zahlenfolge/Joker, keine Sortiermeldung, Maus/Touch und elf
+  Bildschirmgrössen. Kleine Handyansicht visuell geprüft. Syntaxprüfung grün.
+- Vier Public-Dateien installiert: app.js, index.html, rack.js, style.css.
+  Vorherige/neue Hashes geprüft. Rückfallkopie /home/debian/before-028ee92.
+  Öffentliche HTTPS-Antworten bytegleich zum Release, HTML-Basispfad eingesetzt.
+  Healthcheck OK, okey/gamebot/caddy aktiv und PIDs unverändert; kein Neustart.
+  Remote-Commander-Befehlsperren vollständig wiederhergestellt und abgeglichen.
+- Differenzpaket artifacts/gjurzi-update-028ee92.json.gz;
+  SHA256 14c3af0ce777efcc755a6206c9419dcf3a5dbb3a7a5f6a803c986d2497658b76.
