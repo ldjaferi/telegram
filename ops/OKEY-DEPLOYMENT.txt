@@ -598,3 +598,32 @@ Vierte Bot-Stufe – LIVE am 31.10.2026:
 - Live-WebSocket-Prüfung mit separater Gastidentität: neue Stufe angenommen,
   siebenrundige Team-Partie gestartet, echter Bot zog/warf legal ab. Testtisch
   anschliessend verlassen und entfernt; keine Telegram-Nachricht versendet.
+
+Einzelsteine aus Kombis lösen – LIVE am 31.10.2026:
+- Release b4adb66 auf main und https://gjurzi.xhaferi.al/.
+- Ziehen bewegt immer einen einzelnen Stein, auch nach langsamem/längeren
+  Drücken. Der bisherige automatische Gruppengriff nach 350 ms ist entfernt.
+  Für ganze Gruppen: Stein antippen, „Ganze Kombi bewegen“, dann ziehen.
+  Der Gruppenauftrag gilt einmal; Abbruch/Escape/anderes Ziel heben ihn auf.
+- Touch-Klicks dürfen keine gerade erst unter dem Finger eingeblendeten
+  Aktionsknöpfe auslösen. Ein neuer Druck aufs Menü ist nötig; Tastatur bleibt
+  möglich. Verschieben öffnet weiterhin keine Mshile-/Abwurf-Aktionen.
+- Sortierknopf zeigt „Freie Kombis“ bei aktivem „Nur freie“, sonst „Alle Kombis“.
+  Bestehende Kombis werden beim Nur-freie-Sortieren weiterhin geschützt;
+  manuelles Herausziehen bleibt davon unabhängig.
+- Bei identischen Restpunkten und gleicher Steinabdeckung bevorzugt die
+  Kombisuche weniger Gruppen, damit lange Reihen nicht unnötig aufgeteilt werden.
+  Punkte und Spielregeln unverändert.
+- Exakte Screenshot-Hand geprüft: rote 5 wird aus 5–11 gelöst und mit blauer/
+  schwarzer 5 verbunden; rote 6–11 und blaue 11–12–13–1 bleiben gültig,
+  blaue 6 bleibt frei. Langsamer Touch (650 ms), Maus, Gruppenverschieben,
+  Neuladen, Sortierschutz und anschliessende globale Kombisuche getestet.
+- 99 Modul-/Servertests, alle 28 Chromium-Browserszenarien und Syntaxprüfung
+  bestanden; 320-/390-Pixel-Ansichten und Aktionsmenü visuell geprüft.
+- Vier Public-Dateien ersetzt: app.js, rack.js, combinations.js, style.css.
+  Alle alten/neuen Hashes und öffentliche HTTPS-Antworten bytegleich geprüft.
+  Rückfallkopie /home/debian/before-b4adb66. Healthcheck OK; okey/gamebot/caddy
+  aktiv mit unveränderten PIDs. Kein Neustart und keine Tische beendet.
+  Remote-Commander-Befehlsperren wiederhergestellt und abgeglichen.
+- Differenzpaket artifacts/gjurzi-update-b4adb66.json.gz;
+  SHA256 0295d9acdb6458f2a036280ce2528ef352286ef25bec4c21252ae062ea7d80a0.
