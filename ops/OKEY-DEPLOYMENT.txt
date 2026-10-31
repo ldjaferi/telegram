@@ -568,3 +568,33 @@ Zahlensortierung und nur freie Steine – LIVE am 31.10.2026:
   Remote-Commander-Befehlsperren vollständig wiederhergestellt und abgeglichen.
 - Differenzpaket artifacts/gjurzi-update-028ee92.json.gz;
   SHA256 14c3af0ce777efcc755a6206c9419dcf3a5dbb3a7a5f6a803c986d2497658b76.
+
+Vierte Bot-Stufe – LIVE am 31.10.2026:
+- Release 6dcdc65 auf main und https://gjurzi.xhaferi.al/.
+- Neue Kategorie „Ma mer mos luj se ki tmbyt“ (tmbyt); bisherige drei Stufen
+  bleiben erhalten. Am Sitz kompakt „Stufe 4“, vollständiger Name in der Auswahl.
+- Öffentliche Zughistorie pro Runde: aufgenommene/abgeworfene/abgelehnte Steine,
+  deduplizierte physische Steine. Keine fremden Hände und keine Stapelreihenfolge.
+- Exakte Restpunktebewertung; Gegnerrisiko aus öffentlichem Verhalten; Risiko und
+  Joker-Bonus nach Gesamtpunktestand und verbleibenden Runden gewichtet.
+- Bis zu zwei eigene künftige Züge simuliert, drei Abwurfkandidaten, acht gemeinsame
+  Stichproben, maximal 48 Handbewertungen und weiche 18-ms-Suchgrenze. Vergleich
+  von offenem Stein und Stapelzug; sichere Abschlüsse werden sofort genommen.
+- 98 Modul-/Servertests bestanden. 26 Browserszenarien geprüft, darunter drei
+  Grössen für die vierte Stufe. Bestehender Menü-Schliesstest wartet jetzt auch
+  auf das asynchrone aria-expanded-Update; danach isoliert bestanden. 300
+  Vergleichsentscheidungen der drei bisherigen Stufen unverändert. Syntax grün.
+- 168 Benchmark-Runden mit gleichen Austeilungen und vertauschten Stufen:
+  12:4 Team-Partien über fünf Runden, 4:4 über sieben Runden; Restpunkte insgesamt
+  2337:4270. Einzel-Rundensiege 21:11 (je zwei Sitze). Keine allgemeine
+  Überlegenheitsgarantie; Rohdaten und nächste Verbesserungen in okey/docs/.
+- Vier Runtime-Dateien mit geprüften alten/neuen Hashes installiert; neue
+  src/elite-bot.js bei Rückfall entfernbar. Rückfallkopie
+  /home/debian/before-6dcdc65. Nur okey neu gestartet, laufende Tische beendet.
+  gamebot/caddy aktiv mit unveränderten PIDs; öffentliche app.js bytegleich,
+  Healthcheck OK. Remote-Commander-Befehlsperren wiederhergestellt und abgeglichen.
+- Differenzpaket artifacts/gjurzi-update-6dcdc65.json.gz;
+  SHA256 a6b993d7ba2efaca77cda94ccca670589379f4b12adb77da78dad92b28121110.
+- Live-WebSocket-Prüfung mit separater Gastidentität: neue Stufe angenommen,
+  siebenrundige Team-Partie gestartet, echter Bot zog/warf legal ab. Testtisch
+  anschliessend verlassen und entfernt; keine Telegram-Nachricht versendet.
