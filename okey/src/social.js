@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomInt, randomBytes } from 'node:crypto';
+import { nextBujLine } from '../public/table-fun.js';
 
 export const BUJ_LINES = [
   'Ich wür eu Tipps geh, aber gratis sicher nöd.',
@@ -118,9 +119,19 @@ export class SocialHub {
       if(!r.groupChatId) throw Error('Dafür den Tisch mit /nisja in eurer Telegram-Gruppe eröffnen.');
       this.limit(`${action}:${r.groupChatId}`,action==='poll'?3600000:action==='revanche'?300000:30000);
       if(action==='poll') await this.poll(r.groupChatId);
-      else await this.call('sendMessage',{chat_id:r.groupChatId,text:action==='buj'?`🌚 Buj: ${BUJ_LINES[randomInt(BUJ_LINES.length)]}`:'Grossi Schnurre, chliini Serie. Revanche? 😏',...(action==='revanche'?{reply_markup:this.keyboard(r)}:{})});
+      else if(action==='buj') await this.sendBuj(r.groupChatId);
+      else await this.call('sendMessage',{chat_id:r.groupChatId,text:'Grossi Schnurre, chliini Serie. Revanche? 😏',reply_markup:this.keyboard(r)});
     }
     return {message:'Gesendet.'};
+  }
+  async sendBuj(chatId) {
+    const group=this.data.groups[chatId] ||= {members:[],at:this.now()};
+    const next={bujRotation:group.bujRotation ? [...group.bujRotation] : undefined};
+    const line=nextBujLine(next,BUJ_LINES,randomInt);
+    await this.call('sendMessage',{chat_id:chatId,text:`🌚 Buj: ${line}`});
+    group.bujRotation=next.bujRotation;
+    group.at=this.now();
+    await this.save();
   }
   async poll(chatId) {
     return this.call('sendPoll',{chat_id:chatId,question:'Hüt Gjurzi? Wann händ ihr Ziit?',options:[{text:'19:00 – Çay steht bereit'},{text:'20:00 – Hajde bojrum'},{text:'21:00 – Baba kommt später'},{text:'Hüt nöd – Buj spart Strom'}],is_anonymous:false,allows_multiple_answers:true});
@@ -224,7 +235,7 @@ export class SocialHub {
     if(action==='spielabend' || action==='buj') {
       this.limit(`${action==='spielabend'?'poll':'buj'}:${chatId}`,action==='spielabend'?3600000:30000);
       if(action==='spielabend') await this.poll(chatId);
-      else await this.call('sendMessage',{chat_id:chatId,text:`🌚 Buj: ${BUJ_LINES[randomInt(BUJ_LINES.length)]}`});
+      else await this.sendBuj(chatId);
       return true;
     }
     if(!r) throw Error('Eröffne zuerst mit /nisja einen Tisch in dieser Gruppe.');

@@ -22,6 +22,22 @@ export const bujLines = [
   "Ich vermiss eu scho. Aber bliibed no chli det."
 ];
 
+// A shuffled rotation leaves every other line between two uses of the same
+// line. Keep it on the table or stored chat state, never on a browser client.
+export function nextBujLine(state, lines, randomIndex) {
+  if (!Array.isArray(state.bujRotation) || state.bujRotation.length !== lines.length ||
+      new Set(state.bujRotation).size !== lines.length || !state.bujRotation.every(line => lines.includes(line))) {
+    state.bujRotation = [...lines];
+    for (let i = state.bujRotation.length - 1; i > 0; i--) {
+      const j = randomIndex(i + 1);
+      [state.bujRotation[i], state.bujRotation[j]] = [state.bujRotation[j], state.bujRotation[i]];
+    }
+  }
+  const line = state.bujRotation.shift();
+  state.bujRotation.push(line);
+  return line;
+}
+
 export function canMakeExcuse(room, seat) {
   if (!room || room.status !== 'finished' || seat < 0 || seat >= room.players.length) return false;
   const side = room.mode === 'teams' ? seat % 2 : seat;

@@ -97,3 +97,34 @@ test('Telegram moderation checks both admins, denies targets who are admins; con
  actorAdmin=false;await assert.rejects(h.callback({id:'y',data:'ban:'+key,from:{id:1},message:{chat:{id:-100},message_id:8}}),/benötigen/);assert.ok(!calls.some(x=>x[0]==='banChatMember'));
  actorAdmin=true;await h.moderate(message('/entsperren 2'),'entsperren');assert.equal(calls.at(-2)[0],'unbanChatMember');assert.equal(calls.at(-2)[1].only_if_banned,true);
 });
+
+test('Telegram Buj commands and table button share a persistent per-group rotation',async()=>{
+ const {BUJ_LINES}=await import('../src/social.js');
+ const dir=await mkdtemp(join(tmpdir(),'gjurzi-buj-'));
+ const fixture=socialFixture(),{arena,r,calls,f}=fixture;let h=fixture.hub;
+ h.config.socialPath=join(dir,'social.json');r.groupChatId='-100';h.remember(message('/nisja'));
+ const heard=[];
+ try {
+  for(let i=0;i<BUJ_LINES.length*3;i++){
+   f.advance(31000);
+   if(i%2)await h.perform('1','buj');else await h.command(message('/buj'));
+   const line=calls.at(-1)[1].text.replace('🌚 Buj: ','');
+   assert.ok(BUJ_LINES.includes(line));assert.ok(!heard.slice(-(BUJ_LINES.length-1)).includes(line));heard.push(line);
+   if(i===3){
+    await h.saving;
+    const restarted=new SocialHub(arena,h.config,{now:()=>f.time});await restarted.load();
+    restarted.call=h.call;h=restarted;
+   }
+  }
+  for(let i=0;i<heard.length;i+=BUJ_LINES.length)assert.deepEqual(new Set(heard.slice(i,i+BUJ_LINES.length)),new Set(BUJ_LINES));
+  assert.ok(heard.includes('Ich han nöd verlore. Ich han eu Motivation gspendet.'));
+  const rotation=[...h.data.groups['-100'].bujRotation];
+  f.advance(31000);await h.command(message('/buj',1,-200));
+  assert.deepEqual(h.data.groups['-100'].bujRotation,rotation,'other groups do not advance this group');
+  const call=h.call;h.call=async()=>{throw Error('Telegram unavailable')};
+  f.advance(31000);await assert.rejects(h.perform('1','buj'),/unavailable/);
+  assert.deepEqual(h.data.groups['-100'].bujRotation,rotation,'failed send does not consume a line');
+  h.call=call;f.advance(31000);await h.perform('1','buj');
+  assert.equal(calls.at(-1)[1].text,'🌚 Buj: '+rotation[0]);
+ } finally {await h.saving;await rm(dir,{recursive:true,force:true});}
+});
