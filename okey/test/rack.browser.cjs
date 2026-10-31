@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const { mkdir } = require('node:fs/promises');
 const path = require('node:path');
 
-for (const touch of [true, false]) test(`extracting and holding combinations with ${touch?'touch':'mouse'}`, {timeout:30000}, async () => {
+for (const touch of [true, false]) test(`extracting tiles and explicitly moving combinations with ${touch?'touch':'mouse'}`, {timeout:30000}, async () => {
   const {createApplication} = await import('../src/server.js');
   const app = createApplication({port:0}); await app.listen();
   const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH || undefined});
@@ -59,7 +59,12 @@ for (const touch of [true, false]) test(`extracting and holding combinations wit
     await capture('extracted');
 
     await reset();tile=await page.locator('[data-tile=run-2]').boundingBox();before=await boxes();
-    await down(point(tile));await page.waitForFunction(()=>document.querySelectorAll('.group-grabbed').length===3);
+    if(touch)await page.locator('[data-tile=run-2]').tap();else await page.locator('[data-tile=run-2]').click();
+    await capture('before-group-button');
+    assert.equal(await page.locator('.group-grabbed').count(),0,'opening the menu cannot click through to the group button');
+    if(touch)await page.locator('#move-combination').tap();else await page.click('#move-combination');
+    await page.waitForFunction(()=>document.querySelectorAll('.group-grabbed').length===3);
+    await down(point(tile));
     await capture('held');
     await move({x:point(tile).x+55,y:point(tile).y});await up();after=await boxes();
     for(const id of ['run-1','run-2','run-3'])assert.ok(after[id].x>before[id].x+20,'whole combination moves');

@@ -65,3 +65,11 @@ test('both opponents surrender ends team round and only the drawing player sees 
   assert.equal(a.snapshot(r,'a').players[1].lastDraw,undefined);
   a.surrender('b');a.surrender('d');assert.equal(r.status,'finished');assert.equal(r.scores[0].winner,0);
 });
+
+test('recombining the screenshot hand frees the red five and preserves the remaining long run',()=>{
+  const hand=[...[5,6,7,8,9,10,11].map(number=>({id:`r${number}`,color:0,number})),...[11,12,13,1,5,6].map(number=>({id:`b${number}`,color:2,number})),{id:'s5',color:3,number:5}];
+  const result=bestCombinations(hand);
+  assert.equal(result.points,6);assert.deepEqual(result.rest.map(t=>t.id),['b6']);
+  assert.ok(result.groups.some(g=>g.length===3&&['r5','b5','s5'].every(id=>g.some(t=>t.id===id))));
+  assert.ok(result.groups.some(g=>g.length===6&&['r6','r7','r8','r9','r10','r11'].every(id=>g.some(t=>t.id===id))));
+});

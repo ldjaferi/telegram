@@ -906,7 +906,8 @@ body[data-stage=lobby] .match-settings-summary{display:block;flex-basis:100%;fon
 /* Direct dragging extracts a tile; holding first grips the complete meld. */
 #rack-tiles>.tile{-webkit-touch-callout:none;user-select:none}
 #rack-tiles>.tile.group-grabbed{outline:2px solid #ffe1a0;outline-offset:1px;box-shadow:0 4px 12px #25130b99;cursor:grabbing}
-#tile-action-popover .tile-move-hint{grid-column:1/-1;text-align:center;font-size:11px;line-height:1.4;color:#f1dfbc;white-space:nowrap}
+#tile-action-popover .tile-move-hint{grid-column:1/-1;min-height:40px;padding:6px 12px;text-align:center;font:inherit;font-size:12px;line-height:1.4;color:#f1dfbc;white-space:nowrap;background:#ffffff0a;border:1px solid #c5a57170;border-radius:7px;cursor:pointer;touch-action:manipulation}
+#tile-action-popover .tile-move-hint:focus-visible{outline:2px solid #ffe2a6;outline-offset:2px}
 #tile-action-popover .tile-move-hint[hidden]{display:none}
 
 .host-player-status{display:block;font-size:13px;line-height:1.4;color:#c8d6c6;margin-top:5px}

@@ -24,7 +24,8 @@ export function bestCombinations(hand) {
     let best = solve(mask & ~(1 << i));
     for (const group of candidates[i]) if ((group.mask & mask) === group.mask) {
       const tail = solve(mask ^ group.mask), value = group.value + tail.value, count = group.ids.length + tail.count;
-      if (value > best.value || (value === best.value && count > best.count)) best = { value, count, groups: [group.ids, ...tail.groups] };
+      // Equal coverage: keep long runs intact instead of splitting them into smaller melds.
+      if (value > best.value || (value === best.value && (count > best.count || (count === best.count && 1 + tail.groups.length < best.groups.length)))) best = { value, count, groups: [group.ids, ...tail.groups] };
     }
     memo.set(mask, best); return best;
   }

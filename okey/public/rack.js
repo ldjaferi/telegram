@@ -1,5 +1,5 @@
 const clamp=v=>Math.max(0,Math.min(1,v));
-const GAP=3, SEPARATION=9, GROUP_HOLD_MS=350;
+const GAP=3, SEPARATION=9;
 
 // A candidate must be one actual Okey combination, never just matching colours.
 export function rackMatch(tiles){
@@ -175,7 +175,7 @@ export function dropRack(hand,positions,movingIds,destination,b,{avoidIds=[]}={}
 
 export class FreeRack {
   constructor(root,{markup,onMove,onSelect,selected}){
-    this.root=root;this.layer=root.querySelector('#rack-tiles');this.markup=markup;this.onMove=onMove;this.onSelect=onSelect;this.selected=selected;this.positions={};this.key='';this.hand=[];this.drag=null;this.z=1;
+    this.root=root;this.layer=root.querySelector('#rack-tiles');this.markup=markup;this.onMove=onMove;this.onSelect=onSelect;this.selected=selected;this.positions={};this.key='';this.hand=[];this.drag=null;this.groupMoveIds=[];this.z=1;
     root.addEventListener('click',e=>{if(e.detail!==0&&performance.now()<(this.skipClick||0)){e.preventDefault();e.stopImmediatePropagation()}},true);
     root.addEventListener('dragstart',e=>e.preventDefault());
     root.addEventListener('contextmenu',e=>{if(this.drag||e.target.closest('[data-tile]'))e.preventDefault()});
@@ -198,6 +198,7 @@ export class FreeRack {
   save(){try{sessionStorage.setItem('okey-rack:'+this.key,JSON.stringify({key:this.key,positions:this.positions,bounds:this.lastBounds}))}catch{}}
   reset(){this.positions={};this.save()}
   bundle(id){return rackBundles(this.hand,this.positions,this.bounds()).find(g=>g.complete&&g.ids.includes(id))}
+  armGroup(id){this.cancel();const group=this.bundle(id);if(!group)return false;this.groupMoveIds=[...group.ids];this.paint(this.positions,this.bounds());return true}
   freeTiles(){return freeRackTiles(this.hand,this.positions,this.bounds())}
   arrangeFree(groups){this.cancel();const b=this.bounds();this.positions=arrangeFreeTiles(this.hand,this.positions,groups,b);this.lastBounds=b;this.paint(this.positions,b);this.save()}
   arrange(groups){
@@ -214,8 +215,8 @@ export class FreeRack {
       const id=el.dataset.tile||this.hand[[...this.layer.children].indexOf(el)]?.id,p=positions[id];if(!p)continue;
       el.style.left=p.x*b.w+'px';el.style.top=p.y*b.h+'px';el.style.zIndex=this.drag?.ids.includes(id)?100:1;
       el.classList.toggle('bundled',members.has(id));el.classList.toggle('magnet-target',Boolean(magnet?.ids.includes(id)));
-      el.classList.toggle('group-grabbed',Boolean(this.drag?.ids.length>1&&this.drag.ids.includes(id)));
-      el.setAttribute('aria-description',members.has(id)?'Einzeln ziehen. Für die ganze Kombination kurz gedrückt halten, dann ziehen.':'Zum Auswählen antippen oder zum Verschieben ziehen.');
+      el.classList.toggle('group-grabbed',Boolean((this.drag?.ids.length>1&&this.drag.ids.includes(id))||this.groupMoveIds.includes(id)));
+      el.setAttribute('aria-description',members.has(id)?'Einzeln ziehen, auch nach langem Drücken. Die ganze Kombination über die Steinauswahl bewegen.':'Zum Auswählen antippen oder zum Verschieben ziehen.');
     }
     const caption=this.root.querySelector('.rack-engraving');
     if(caption){caption.textContent=magnet?`${magnet.complete?'✓':'＋'} ${ {run:'Reihe',set:'Gruppe',pair:'Paar'}[magnet.kind]} · loslassen`:complete.length?`${complete.length} passende Kombination${complete.length===1?'':'en'} · magnetisch verbunden`:'Steine ziehen · passende Kombinationen verbinden sich';}
@@ -223,31 +224,32 @@ export class FreeRack {
   down(e){
     if(e.button!==0)return;
     const el=e.target.closest('[data-tile]');
-    if(!el){this.skipClick=0;return;}
+    if(!el){this.cancel();this.skipClick=0;return;}
     const id=el.dataset.tile,p=this.positions[id];if(!p)return;
     if(this.drag)return;
-    const group=this.bundle(id);
-    const d=this.drag={id,ids:[id],avoidIds:group?.ids||[],el,pointer:e.pointerId,sx:e.clientX,sy:e.clientY,origin:{...p},active:false,threshold:e.pointerType==='touch'?8:4,preview:null};this.root.setPointerCapture(e.pointerId);
-    if(group&&!e.altKey)d.holdTimer=setTimeout(()=>{
-      if(this.drag!==d||d.active)return;
-      d.ids=group.ids;d.avoidIds=[];this.paint(this.positions,this.bounds());
-    },GROUP_HOLD_MS);
+    const group=this.bundle(id),whole=group&&!e.altKey&&this.groupMoveIds.length===group.ids.length&&group.ids.every(id=>this.groupMoveIds.includes(id));
+    // A slow touch must still extract one tile. Group movement is explicitly
+    // armed from the selected tile's actions, never inferred from hold duration.
+    this.groupMoveIds=[];
+    this.drag={id,ids:whole?[...group.ids]:[id],avoidIds:whole?[]:group?.ids||[],el,pointer:e.pointerId,sx:e.clientX,sy:e.clientY,origin:{...p},active:false,threshold:e.pointerType==='touch'?8:4,preview:null};
+    this.root.setPointerCapture(e.pointerId);this.paint(this.positions,this.bounds());
   }
   move(e){
     const d=this.drag;if(!d||d.pointer!==e.pointerId)return;
     if(!d.active&&Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<d.threshold)return;
-    e.preventDefault();clearTimeout(d.holdTimer);d.active=true;d.el.classList.add('dragging');const b=this.bounds();
+    e.preventDefault();d.active=true;d.el.classList.add('dragging');const b=this.bounds();
     const anchor=Math.min(...d.ids.map(id=>this.positions[id]?.x??d.origin.x));
     d.preview=dropRack(this.hand,this.positions,d.ids,{x:clamp(anchor+(e.clientX-d.sx)/b.w),y:clamp(d.origin.y+(e.clientY-d.sy)/b.h)},b,{avoidIds:d.avoidIds});
     this.paint(d.preview.positions,b,d.preview.match);
   }
   up(e){
-    const d=this.drag;if(!d||d.pointer!==e.pointerId)return;clearTimeout(d.holdTimer);this.drag=null;d.el.classList.remove('dragging');
+    const d=this.drag;if(!d||d.pointer!==e.pointerId)return;this.drag=null;d.el.classList.remove('dragging');
     if(this.root.hasPointerCapture(e.pointerId))this.root.releasePointerCapture(e.pointerId);this.skipClick=performance.now()+400;
     if(d.active){const contact=d.preview&&newRackContact(this.positions,d.preview.positions,d.ids,this.bounds());if(d.preview)this.positions=d.preview.positions;this.save();this.onMove(d.id,{group:d.ids.length>1,contact:Boolean(contact)});this.render(this.hand,this.interactive)}else this.onSelect(d.id);
   }
-  cancel(){const d=this.drag;if(!d)return;clearTimeout(d.holdTimer);this.drag=null;d.el.classList.remove('dragging');if(this.root.hasPointerCapture(d.pointer))this.root.releasePointerCapture(d.pointer);this.render(this.hand,this.interactive)}
+  cancel(){const armed=this.groupMoveIds.length;this.groupMoveIds=[];const d=this.drag;if(!d){if(armed)this.paint(this.positions,this.bounds());return;}this.drag=null;d.el.classList.remove('dragging');if(this.root.hasPointerCapture(d.pointer))this.root.releasePointerCapture(d.pointer);this.render(this.hand,this.interactive)}
   keyMove(e){
+    if(e.key==='Escape'){this.cancel();return;}
     const el=e.target.closest('[data-tile]');if(!el||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
     e.preventDefault();const b=this.bounds(),p=this.positions[el.dataset.tile],step=e.shiftKey?4:18;
     const result=dropRack(this.hand,this.positions,[el.dataset.tile],{x:clamp(p.x+(e.key==='ArrowRight'?step:e.key==='ArrowLeft'?-step:0)/b.w),y:e.key==='ArrowDown'?1:e.key==='ArrowUp'?0:p.y},b,{avoidIds:this.bundle(el.dataset.tile)?.ids});

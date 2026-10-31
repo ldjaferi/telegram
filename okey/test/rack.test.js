@@ -49,13 +49,15 @@ test('direct dragging extracts one tile and holding after movement cannot grab i
   f.rack.up(f.event(12,105));
   assert.equal(f.rack.positions.a.y,1);assert.equal(f.rack.positions.b.y,0);assert.equal(f.rack.positions.c.y,0);
 });
-test('holding a combination grips the whole group; cancellation and quick taps clear the hold timer',t=>{
+test('a slow press still extracts only one tile; moving the group requires an explicit choice',t=>{
   t.mock.timers.enable({apis:['setTimeout']});
-  const f=bundledFixture();f.rack.down(f.event());t.mock.timers.tick(350);
-  assert.deepEqual(f.rack.drag.ids,['a','b','c']);
+  const f=bundledFixture();f.rack.down(f.event());t.mock.timers.tick(1500);
+  assert.deepEqual(f.rack.drag.ids,['a']);f.rack.cancel();
+  assert.equal(f.rack.armGroup('a'),true);assert.deepEqual(f.rack.groupMoveIds,['a','b','c']);
+  f.rack.down(f.event());assert.deepEqual(f.rack.drag.ids,['a','b','c']);
   f.rack.move(f.event(12,105));f.rack.up(f.event(12,105));
-  assert.ok(Object.values(f.rack.positions).every(p=>p.y===1));
-  f.rack.down(f.event());f.rack.cancel();t.mock.timers.tick(500);assert.equal(f.rack.drag,null);
-  f.rack.down(f.event());f.rack.up(f.event());t.mock.timers.tick(500);assert.equal(f.rack.drag,null);
-  assert.equal(f.moves,1);assert.equal(f.taps,1);
+  assert.ok(Object.values(f.rack.positions).every(p=>p.y===1));assert.deepEqual(f.rack.groupMoveIds,[]);
+  f.rack.down(f.event());t.mock.timers.tick(1500);assert.deepEqual(f.rack.drag.ids,['a']);f.rack.cancel();
+  f.rack.armGroup('a');f.rack.cancel();assert.deepEqual(f.rack.groupMoveIds,[]);
+  assert.equal(f.rack.armGroup('missing'),false);assert.equal(f.moves,1);
 });

@@ -61,9 +61,24 @@ tileActions.id = 'tile-action-popover';
 tileActions.setAttribute('role', 'group');
 tileActions.setAttribute('aria-label', 'Aktionen für den ausgewählten Stein');
 tileActions.hidden = true;
-const tileMoveHint = document.createElement('span');
+let tileActionPointerDown = false;
+// A touch-generated click may target a button that appeared under the finger
+// after pointerup. Require a new press on the menu; keyboard activation is fine.
+tileActions.addEventListener('click', event => {
+  if (event.detail && !tileActionPointerDown) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
+document.addEventListener('pointercancel', () => { tileActionPointerDown = false; }, true);
+const tileMoveHint = document.createElement('button');
+tileMoveHint.type = 'button';
+tileMoveHint.id = 'move-combination';
 tileMoveHint.className = 'tile-move-hint';
-tileMoveHint.textContent = 'Einzeln ziehen · Kombi halten & ziehen';
+tileMoveHint.textContent = 'Ganze Kombi bewegen';
+tileMoveHint.onclick = () => {
+  const id = selected;
+  if (!freeRack.armGroup(id)) return;
+  selected = null; renderRack();
+  [...document.querySelectorAll('#rack-tiles [data-tile]')].find(el => el.dataset.tile === id)?.focus({ preventScroll: true });
+};
 tileMoveHint.hidden = true;
 tileActions.append(tileMoveHint);
 tileActions.append($('#discard'), $('#claim'));
@@ -84,6 +99,8 @@ function dismissTileActions(restoreFocus = false) {
 // A tap on a free board position places the selected tile; outside the board
 // it only dismisses the selection.
 document.addEventListener('pointerdown', event => {
+  tileActionPointerDown = Boolean(event.target.closest('#tile-action-popover'));
+  if (freeRack.groupMoveIds.length && !event.target.closest('#tile-action-popover, #rack')) freeRack.cancel();
   if (!selected || event.target.closest('#tile-action-popover, #rack')) return;
   dismissTileActions();
 }, true);
@@ -624,8 +641,14 @@ function sortRack(mode) {
     if (result) freeRack.arrange(groups);
   }
 }
+function updateSortScope() {
+  const onlyFree = $('#sort-only-free').checked;
+  $('#sort-combinations').textContent = onlyFree ? 'Freie Kombis' : 'Alle Kombis';
+  $('#sort-combinations').title = onlyFree ? 'Nur freie Steine kombinieren; gelegte Kombis bleiben bestehen' : 'Alle Steine neu zu den besten Kombinationen ordnen';
+}
 $('#sort-only-free').checked = localStorage.getItem('okey-sort-only-free') === 'true';
-$('#sort-only-free').onchange = () => localStorage.setItem('okey-sort-only-free', String($('#sort-only-free').checked));
+$('#sort-only-free').onchange = () => { localStorage.setItem('okey-sort-only-free', String($('#sort-only-free').checked)); updateSortScope(); };
+updateSortScope();
 $('#sort').onclick = () => sortRack('colors');
 $('#sort-numbers').onclick = () => sortRack('numbers');
 $('#sort-combinations').onclick = () => sortRack('combinations');
