@@ -404,3 +404,23 @@ Mobile Aufteilung und Tischmenü – 31.10.2026 (Europe/Zurich):
 - Rückfallkopie: /home/debian/before-1bb71ab (root, 0700).
   Installationsskript prüft vorherige/neue Hashes und stellt bei Fehlern zurück.
   Remote-Commander-Sudo-Sperre danach vollständig wiederhergestellt.
+
+Steine aus Kombis herauslösen – vorbereitet am 31.10.2026:
+- Code-Release 9de8015 auf main, noch NICHT auf dem VPS eingespielt.
+- Direktes Ziehen bewegt einen einzelnen Stein. 350 ms halten markiert die
+  komplette Kombi gold und erlaubt gemeinsames Verschieben.
+- Beim Herauslösen sind die bisherigen Nachbarn für diesen Zug vom Magneten
+  ausgenommen. Neue Kombis bleiben möglich; späteres Wiederanlegen ebenso.
+- Antippen und auf freies Holz tippen funktioniert wieder als Alternative.
+  Bewegung, Loslassen und Abbruch räumen den Halte-Timer zuverlässig auf.
+- Hinweis im Steinmenü und Spielanleitung angepasst. 85 Spiel-/Modultests,
+  16 Chromium-Browsertests und Syntaxprüfungen bestanden; Touch und Maus
+  mit vollständigem 15-Steine-Brett sowie elf Bildschirmgrössen geprüft.
+- Auslieferungspaket lokal: artifacts/gjurzi-extraction-9de8015.tar.gz.
+  Ausschliesslich public/rack.js, public/app.js, public/style.css und Manifest
+  mit vorherigen/neuen SHA256-Werten. Referenzstand: 23dc0a0.
+- Hindernis: ov-c992dc in Remote Commander offline, auch nach erneutem Versuch.
+  Startbefehl darüber nicht ausführbar. Kein alternativer erreichbarer Zugang;
+  dokumentiertes SSH ist auf den Anschluss des Benutzers eingeschränkt.
+- Beim Wiederverbinden zuerst Live-Dateien mit den erwarteten Hashes abgleichen.
+  Mit Rückfallkopie statisch installieren; kein Spielserver-Neustart erforderlich.
