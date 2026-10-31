@@ -452,3 +452,25 @@ Buj-Wiederholungen und Offline-Mitspieler – vorbereitet am 31.10.2026:
   Vor Installation aktuellen Serverstand vergleichen und Rückfallkopie erstellen.
   Dieses kombinierte Update benötigt nun einen Neustart NUR von okey.service;
   dadurch enden laufende Tische. gamebot und caddy nicht neu starten.
+
+Gezogenen Stein markieren und offene Updates – ausgerollt am 31.10.2026:
+- Release 220bd15 auf main und LIVE unter https://gjurzi.xhaferi.al/.
+- NEU-Schrift auf dem Stein durch einen dekorativen goldenen Punkt oberhalb
+  ersetzt. Zahl/Jokerbild und benachbarte Steine bleiben frei; goldener Rahmen
+  und vier Sekunden Markierung bleiben erhalten, ebenso reduzierte Bewegung.
+- Chromium-Sichtprüfung bei 320x600, 375x600, 390x736 und 1440x900 mit
+  zweistelligen Zahlen/Joker in beiden Brettzeilen; kein Überdecken, Markierung
+  endet nach vier Sekunden. 87 Modultests, 17 Browsertests, Syntaxprüfung grün.
+- VPS wieder online. Auch alle zuvor offenen Verbesserungen aus 9de8015,
+  2b13876 und e9400d5 eingespielt: Einzelstein-Ziehen/Haltegeste, Buj-Rotation
+  im Spiel und Telegram sowie klareres Gastgebermenü für Offline-Mitspieler.
+- Sieben Dateien installiert, vorherige Live-Hashes gegen 23dc0a0 geprüft;
+  Quellcode-CRLF berücksichtigt. Neues Material vor Installation hashgeprüft,
+  JS-Syntax auf dem VPS geprüft, Rückfallkopie /home/debian/before-220bd15.
+- Nur okey.service neu gestartet; gamebot/caddy aktiv mit unveränderten PIDs.
+  Healthcheck OK, fünf öffentliche Dateien über HTTPS bytegleich zum Release.
+  Vollständige Remote-Commander-Befehlsperrliste danach wiederhergestellt
+  und erneut abgeglichen; sudo wieder gesperrt.
+- Lokales Differenzpaket: artifacts/gjurzi-update-220bd15.json.gz;
+  SHA256 8b0b717975e94e16693ae9a9031350a24df145eb48f8aea44d86bbfbee3f3bd8.
+  Staging und Installationsskript: /home/debian/gjurzi-220bd15.
