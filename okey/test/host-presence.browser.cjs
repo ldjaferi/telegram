@@ -52,11 +52,22 @@ test('host sees disconnect and reconnect in an open menu and can replace an offl
     await card.locator('[data-host=remove]').click();
     assert.equal(room.players[seat].id,id,'removal waits for confirmation');
     await host.locator('[data-action=dismiss-message]').click();
-    await host.click('#tools-button');await card.locator('[data-host=remove]').click();await host.locator('[data-host-confirm=remove]').click();
+    const offlineAvatar=host.locator(`.avatar-button[data-host=remove][data-player="${id}"]`);
+    await offlineAvatar.click();
+    assert.equal(room.players[seat].id,id,'avatar removal also requires confirmation');
+    await host.locator('[data-action=dismiss-message]').click();
+    if(process.env.LAYOUT_SCREENSHOT_DIR)await host.screenshot({path:path.join(process.env.LAYOUT_SCREENSHOT_DIR,'host-offline-seat.png')});
+    await host.locator(`.seat-release[data-player="${id}"]`).click();await host.locator('[data-host-confirm=remove]').click();
     await host.waitForFunction(()=>document.querySelector('#seat-left')?.textContent.includes('Ersatz-Baba')||document.querySelector('#seat-right')?.textContent.includes('Ersatz-Baba')||document.querySelector('#seat-top')?.textContent.includes('Ersatz-Baba'));
     assert.equal(room.players[seat].bot,true);assert.notEqual(room.players[seat].id,id);
     assert.deepEqual(room.players[seat].hand,hand);assert.deepEqual(room.totals,totals);
     assert.throws(()=>app.arena.join({id,name:'Blerim'},room.code,room.players[seat].id),/entfernt/);
+    const replacementId=room.players[seat].id,friend=await open('Ilir',room.code);
+    await friend.locator(`[data-bot-seat="${replacementId}"]`).click();
+    await friend.waitForFunction(()=>document.body.dataset.stage==='playing');
+    assert.equal(room.players[seat].name,'Ilir');assert.equal(room.players[seat].bot,false);
+    assert.deepEqual(room.players[seat].hand,hand);assert.deepEqual(room.totals,totals);
+    assert.equal(await friend.locator('.avatar-button[data-host],.seat-release').count(),0,'guests cannot free seats');
     assert.deepEqual(errors,[]);
   } finally {await browser.close();await app.close();}
 });

@@ -114,9 +114,18 @@ $('#rack').addEventListener('pointercancel', scheduleTileActions);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tileActions.hidden) { selected = null; renderRack(); } });
 // END TILE-ACTIONS-TRIAL
 
-let token = sessionStorage.getItem('okey-token') || '';
 let smokeTimer, stopBubbles;
 const telegram = window.Telegram?.WebApp;
+const browserTokenKey = 'okey-browser-token';
+// Keep browser seats across closed tabs. Telegram always authenticates its own
+// signed identity on page load, independently of a saved browser guest.
+const savedBrowserToken = () => sessionStorage.getItem('okey-token') || localStorage.getItem(browserTokenKey) || '';
+let token = telegram?.initData ? '' : savedBrowserToken();
+function forgetToken() {
+  if (localStorage.getItem(browserTokenKey) === token) localStorage.removeItem(browserTokenKey);
+  if (sessionStorage.getItem('okey-token') === token) sessionStorage.removeItem('okey-token');
+  token = telegram?.initData ? '' : savedBrowserToken();
+}
 telegram?.ready(); telegram?.expand();
 function fitViewport() {
   document.documentElement.style.setProperty('--app-height', Math.floor(Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight)) + 'px');
@@ -271,9 +280,15 @@ async function connect() {
       let guestName = '';
       if (!telegram?.initData && !config.dev) guestName = await new Promise(resolve => { modal('<div class=salon-emblem aria-hidden=true>✧</div><p class=salon-kicker>DER GJURZI SALON</p><h2>Willkommen am Tisch!</h2><form id=guest-form><label for=guest-name>Wie heisst du?</label><input id=guest-name maxlength=24 required autocomplete=nickname><button class="button primary" type=submit>Hajde bojrum →</button></form>'); $('#guest-form').onsubmit = e => { e.preventDefault(); const name = $('#guest-name').value.trim(); if(name){ $('#modal').close(); resolve(name); } }; });
       const login = await post('/api/login', { initData: telegram?.initData || '', name: guestName || new URLSearchParams(location.search).get('name') || 'Gast' });
-      token = login.token; user = login.user; sessionStorage.setItem('okey-token', token);
+      token = login.token; user = login.user;
     }
     const ticket = await post('/api/ticket'); user = ticket.user;
+    if (!telegram?.initData) {
+      // Migrate only verified browser sessions, never an old Telegram login.
+      if (!user.id.startsWith('local-')) { forgetToken(); reconnectTimer = setTimeout(connect, 0); return; }
+      localStorage.setItem(browserTokenKey, token);
+      sessionStorage.removeItem('okey-token');
+    }
     const socketUrl = new URL('socket', appBase); socketUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'; socketUrl.searchParams.set('ticket', ticket.ticket);
     socket = new WebSocket(socketUrl);
     socket.onmessage = e => {
@@ -315,7 +330,7 @@ async function connect() {
     socket.onerror = () => socket.close();
   } catch (error) {
     connected = false; $('#connection').textContent = 'NICHT VERBUNDEN';
-    if (error.status === 401 && token) { token = ''; sessionStorage.removeItem('okey-token'); reconnectTimer = setTimeout(connect, 500); }
+    if (error.status === 401 && token) { forgetToken(); reconnectTimer = setTimeout(connect, 500); }
     else { toast(error.message); if (error instanceof TypeError) reconnectTimer = setTimeout(connect, 3000); }
   }
 }
@@ -333,7 +348,11 @@ function renderSeats() {
     const seat = $(`#seat-${position}`);
     seat.hidden = !room;
     seat.className = `seat seat-${position}${p?.out ? ' out' : ''}${room?.players[room.turn]?.id === p?.id && room?.status === 'playing' ? ' active' : ''}${target && p?.id === target ? ' target' : ''}`;
-    seat.innerHTML = p ? `<div class="player-info"><button class="avatar-button" data-target="${esc(p.id || '')}" title="${esc(p.name)}${room?.mode === 'teams' && offset === 2 && !p.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${p.out ? 'BRETT WEG. EHRE AUCH.' : p.preview ? 'COMPUTERGEGNER' : `${p.bot ? (botLevelLabels[room?.botLevel] || 'Si bur') + ' · ' : !p.connected ? 'OFFLINE · ' : ''}${p.count} STEINE${p.wins ? ` · ${p.wins} SIEGE` : ''}`}</div></div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
+    const canRemove = p && !p.bot && !p.connected && room.owner === user?.id;
+    const playerAction = canRemove ? `data-host="remove" data-player="${esc(p.id)}"` : `data-target="${esc(p?.id || '')}"`;
+    const playerTitle = canRemove ? `${p.name}: Offline-Platz freigeben` : `${p?.name}${room?.mode === 'teams' && offset === 2 && !p?.bot ? ' eine Teamfrage stellen' : ' als Ziel für Gesten wählen'}`;
+    const playerStatus = canRemove ? `<button class="seat-release" ${playerAction} aria-label="${esc(playerTitle)}">OFFLINE · FREIGEBEN</button>` : p?.out ? 'BRETT WEG. EHRE AUCH.' : p?.preview ? 'COMPUTERGEGNER' : `${p?.bot ? (botLevelLabels[room?.botLevel] || 'Si bur') + ' · ' : !p?.connected ? 'OFFLINE · ' : ''}${p?.count} STEINE${p?.wins ? ` · ${p.wins} SIEGE` : ''}`;
+    seat.innerHTML = p ? `<div class="player-info"><button class="avatar-button" ${playerAction} title="${esc(playerTitle)}" ${p.preview ? 'disabled' : ''}>${faces[offset]}</button><div class="seat-name">${esc(p.name)}</div><div class="seat-status">${playerStatus}</div></div><div class="seat-discard" aria-label="Letzter Abwurf von ${esc(p.name)}">${room?.round ? discardMarkup(seatIndex,p.name) : ''}</div>` : '<div class="avatar-button">＋</div><div class="seat-name">Platz frei</div><div class="seat-status">FREUNDE WILLKOMMEN</div>';
   }
 }
 function renderCenter() {

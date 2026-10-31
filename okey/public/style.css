@@ -911,3 +911,6 @@ body[data-stage=lobby] .match-settings-summary{display:block;flex-basis:100%;fon
 
 .host-player-status{display:block;font-size:13px;line-height:1.4;color:#c8d6c6;margin-top:5px}
 .host-player-status.is-offline{color:#edc37d}
+
+/* Reuse the existing status row; the avatar also opens the host confirmation. */
+.seat-release{display:inline;background:none;border:0;padding:0;color:var(--gold,#e5c17c);font:inherit;line-height:inherit;letter-spacing:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
