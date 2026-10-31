@@ -28,7 +28,7 @@ test('host sees disconnect and reconnect in an open menu and can replace an offl
     app.arena.join({id:'online-colleague',name:'Dritan'},room.code);
     const buddy=await open('Blerim',room.code);
     await buddy.waitForFunction(()=>document.body.dataset.stage==='lobby');
-    await host.click('[data-action=settings]');await host.locator('#match-form button[type=submit]').click();
+    await host.click('[data-action=start-with-bots]');
     await host.waitForFunction(()=>document.body.dataset.stage==='playing');
     await buddy.waitForFunction(()=>document.body.dataset.stage==='playing');room.nextPuffAt=Infinity;
     const seat=room.players.findIndex(p=>p.name==='Blerim'),id=room.players[seat].id;

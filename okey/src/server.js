@@ -114,6 +114,7 @@ export function createApplication(config = {}) {
           else if (m.type === 'start') {
             const r = arena.roomFor(user.id);
             if (r?.owner === user.id && r.round === 0 && !r.roundLimitChosen) throw Error('Wähle zuerst 5 oder 7 Runden. Bitte öffne die Partie-Einstellungen oder lade das Spiel neu.');
+            if (r?.owner === user.id && r.round === 0 && r.players.filter(p => !p.bot).length < 4 && m.withBots !== true) throw Error('Es sind noch Plätze frei. Wähle „Mit Bots beginnen“ oder warte auf deine Freunde.');
             arena.start(user.id);
           }
           else if (m.type === 'host') {

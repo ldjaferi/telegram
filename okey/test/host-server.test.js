@@ -18,7 +18,7 @@ test('real sockets enforce host permissions, pause broadcasts, removals notify t
   const a=await client('Host'),b=await client('Buddy'),c=await client('Third');a.send('create',{roundLimit:5});const {room:r}=await a.until(m=>m.room?.code);
   b.send('join',{code:r.code});await b.until(m=>m.room?.players.length===2);c.send('join',{code:r.code});await c.until(m=>m.room?.players.length===3);
   b.send('host',{action:'remove',target:a.id});assert.match((await b.until(m=>m.type==='error')).message,/Gastgeber/);
-  a.send('start');await c.until(m=>m.room?.status==='playing');
+  a.send('start',{withBots:true});await c.until(m=>m.room?.status==='playing');
   a.send('host',{action:'pause'});const state=await b.until(m=>m.room?.paused);assert.equal(state.room.players[0].hand,undefined);
   b.send('discard',{tileId:'forged'});assert.equal((await b.until(m=>m.type==='error')).type,'error');
   a.send('host',{action:'resume'});await b.until(m=>m.room && !m.room.paused);

@@ -361,7 +361,11 @@ function renderCenter() {
     return;
   }
   if (room.status === 'lobby') {
-    $('#center').innerHTML = `<div class="lobby-intro"><p class="salon-kicker">EUER TISCH IST BEREIT</p><p class="welcome-title">${esc(tableName(room.code))}</p><div class="salon-code-card"><span class="salon-code-label">DEIN TISCHCODE</span><strong class="salon-code" aria-label="Tischcode ${room.code}">${room.code}</strong><button class="button secondary" data-action="copy-code">Code kopieren</button><p>Teile den Code mit deinen Freunden.<br>Sie wählen „Tischcode eingeben“.</p></div>${room.owner === user.id ? '<button class="button primary" data-action="settings">Partie einstellen & starten →</button>' : ''}<p>Du bist dabei, ${esc(user.name)}!</p></div><div class="lobby-teams">${teamChoiceMarkup()}</div><div class="welcome-buttons lobby-actions"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span></div>`;
+    const humans = room.players.filter(p => !p.bot).length, freeSeats = 4 - humans;
+    const startButtons = room.owner !== user.id ? '<p>Warte auf den Gastgeber.</p>' : !room.roundLimitChosen
+      ? '<button class="button primary" data-action="settings">Runden wählen →</button>'
+      : `<div class="welcome-buttons lobby-start">${freeSeats ? '<button class="button primary" data-action="start-with-bots">Mit Bots beginnen</button><button class="button secondary" data-action="wait-for-friends">Weiter warten</button>' : '<button class="button primary" data-action="start">Partie starten →</button>'}</div>`;
+    $('#center').innerHTML = `<div class="lobby-intro"><p class="salon-kicker">EUER TISCH IST BEREIT</p><p class="welcome-title">${esc(tableName(room.code))}</p><p class="lobby-presence">${humans} von 4 Plätzen mit Freunden besetzt.${freeSeats ? `<br>Mit ${freeSeats} ${freeSeats === 1 ? 'Bot' : 'Bots'} beginnen oder auf deine Freunde warten?` : '<br>Alle Plätze sind besetzt. Bereit zum Start!'}</p>${startButtons}<div class="salon-code-card"><span class="salon-code-label">DEIN TISCHCODE</span><strong class="salon-code" aria-label="Tischcode ${room.code}">${room.code}</strong><button class="button secondary" data-action="copy-code">Code kopieren</button><p>Teile den Code mit deinen Freunden.<br>Sie wählen „Tischcode eingeben“.</p></div></div><div class="lobby-teams">${teamChoiceMarkup()}</div><div class="welcome-buttons lobby-actions"><button class="button secondary" data-action="invite">Freunde einladen ↗</button><span class="match-settings-summary">${room.roundLimitChosen ? `${room.roundLimit} Runden` : 'Rundenzahl noch wählen'} · ${room.mode === 'teams' ? 'Teams: gegenüberliegende Plätze' : 'Jeder gegen jeden'}</span>${room.owner === user.id && room.roundLimitChosen ? '<button class="text-button" data-action="settings">Einstellungen ändern</button>' : ''}</div>`;
     return;
   }
   if (room.status === 'finished') {
@@ -576,6 +580,8 @@ document.addEventListener('click', e => {
   if (action === 'dismiss-message') { $('#modal').close(); return; }
   if (action === 'solo' || action === 'create') setupTable(action === 'solo');
   else if (action === 'start') send('start');
+  else if (action === 'start-with-bots') send('start', { withBots: true });
+  else if (action === 'wait-for-friends') toast('Der Tisch wartet auf deine Freunde. Das Spiel hat noch nicht begonnen.');
   else if (action === 'settings') setupTable(false, true);
   else if (action === 'new-match') send('new-match');
   else if (action === 'scores') showScores();
@@ -642,7 +648,7 @@ function showScores() {
 $('#scores-button').onclick = showScores;
 function setupTable(solo, existing = false) {
   const selectedMode = existing ? room.mode : solo ? 'individual' : 'teams';
-  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><label for="bot-level">Wie stark spielen die Bots?</label><select id="bot-level"><option value="fmi">Si fmi · wie ein Kind</option><option value="bur">Si bur · guter Spieler</option><option value="baba">Si Baba · stärkste Stufe</option></select><p class="bot-level-note">Gilt für alle Bots, auch deinen Teampartner. Alle spielen mit verdeckten Händen.</p><fieldset class="round-options"><legend>Wie viele Runden spielt ihr?</legend><label><input type="radio" name="rounds" value="5" required><span><strong>5</strong> Runden</span></label><label><input type="radio" name="rounds" value="7" required><span><strong>7</strong> Runden</span></label></fieldset><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Warte auf deine Kollegen. Freie Plätze übernehmen beim Start Computer.'}</p><button class="button primary" type="submit">${existing ? 'Runde starten' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
+  modal(`<h2>${existing ? 'Eure Partie' : 'Neue Partie'}</h2><form id="match-form"><label for="match-mode">Spielweise</label><select id="match-mode"><option value="teams">Team A gegen Team B · gegenüber</option><option value="individual">Jeder gegen jeden</option></select><label for="bot-level">Wie stark spielen die Bots?</label><select id="bot-level"><option value="fmi">Si fmi · wie ein Kind</option><option value="bur">Si bur · guter Spieler</option><option value="baba">Si Baba · stärkste Stufe</option></select><p class="bot-level-note">Gilt für alle Bots, auch deinen Teampartner. Alle spielen mit verdeckten Händen.</p><fieldset class="round-options"><legend>Wie viele Runden spielt ihr?</legend><label><input type="radio" name="rounds" value="5" required><span><strong>5</strong> Runden</span></label><label><input type="radio" name="rounds" value="7" required><span><strong>7</strong> Runden</span></label></fieldset><p>Die niedrigste Gesamtpunktzahl gewinnt. ${solo ? 'Du spielst mit drei Computern.' : 'Am Tisch entscheidest du, ob du auf deine Freunde wartest oder freie Plätze mit Bots besetzt.'}</p><button class="button primary" type="submit">${existing ? 'Einstellungen speichern' : solo ? 'Losspielen' : 'Tisch erstellen'}</button></form>`);
   $('#match-mode').value = selectedMode;
   $('#bot-level').value = existing ? room.botLevel || 'bur' : 'bur';
   if (existing && room.roundLimitChosen) $(`#match-form input[value="${room.roundLimit}"]`).checked = true;
@@ -650,7 +656,7 @@ function setupTable(solo, existing = false) {
     event.preventDefault();
     if (!$('#match-form').reportValidity()) return;
     const options = { botLevel: $('#bot-level').value, mode: $('#match-mode').value, roundLimit: Number($('#match-form input[name=rounds]:checked').value) };
-    if (existing) { send('configure', options); send('start'); } else send('create', { solo, ...options });
+    if (existing) send('configure', options); else send('create', { solo, ...options });
     $('#modal').close();
   };
 }

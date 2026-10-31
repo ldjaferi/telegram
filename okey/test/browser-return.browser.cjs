@@ -40,8 +40,11 @@ test('closing and reopening an invitation restores the guest and host at a full 
     const room=[...f.app.arena.rooms.values()][0];
     let guest=await f.open(guestContext,room.code,'Blerim');
     await guest.waitForFunction(()=>document.body.dataset.stage==='lobby');
-    for(const name of ['Ilir','Dritan'])f.app.arena.join({id:name,name},room.code);
-    await host.click('[data-action=settings]');await host.locator('#match-form button[type=submit]').click();
+    for(const name of ['Ilir','Dritan']){
+      const friend=await f.open(await f.context(),room.code,name);
+      await friend.waitForFunction(()=>document.body.dataset.stage==='lobby');
+    }
+    await host.click('[data-action=start]');
     await guest.waitForFunction(()=>document.body.dataset.stage==='playing');room.nextPuffAt=Infinity;
     const guestSeat=room.players.findIndex(p=>p.name==='Blerim'),id=room.players[guestSeat].id,owner=room.owner;
     const hand=structuredClone(room.players[guestSeat].hand),totals=[...room.totals];

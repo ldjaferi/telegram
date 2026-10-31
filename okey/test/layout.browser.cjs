@@ -128,8 +128,7 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     await page.evaluate(() => scrollTo(0, 0));
     assertSeparate(g.textAndButtons, 'lobby text and buttons overlap');
     await capture(page, viewport, 'lobby');
-    await page.click('[data-action=settings]');
-    await page.locator('#match-form button[type=submit]').click();
+    await page.click('[data-action=start]');
     await page.waitForFunction(() => document.body.dataset.stage === 'playing');
     room.nextPuffAt = Infinity;
     room.players[0].hand = Array.from({ length: 15 }, (_, i) => ({ id: `layout-${i}`, color: i % 4, number: i % 13 + 1 }));

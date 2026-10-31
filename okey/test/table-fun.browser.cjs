@@ -43,7 +43,7 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
       await Promise.all(pages.map(p=>p.waitForSelector('.event-card.tea')));
       await Promise.all(pages.map(p=>p.evaluate(()=>document.querySelector('#table-event').replaceChildren())));
     }
-    await sync(); await host.click('[data-action=settings]'); await host.locator('#match-form button[type=submit]').click();
+    await sync(); await host.click('[data-action=start]');
     await Promise.all(pages.map(p=>p.waitForFunction(()=>document.body.dataset.stage==='playing')));
     room.nextPuffAt=Infinity;
     room.players[0].hand=Array.from({length:15},(_,i)=>({id:`invalid-${i}`,color:i===14?3:0,number:i===14?12:13}));
