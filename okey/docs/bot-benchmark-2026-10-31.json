@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-31",
+  "method": "Paired seeded deals with difficulties swapped; production time/node limits; see bot-strategy.md for interpretation and limitations.",
+  "runs": [
+    {
+      "seed": 9000,
+      "pairs": 16,
+      "rounds": 1,
+      "mode": "individual",
+      "games": 32,
+      "roundWins": {
+        "tmbyt": 21,
+        "baba": 11,
+        "stock": 0
+      },
+      "points": {
+        "tmbyt": 915,
+        "baba": 1519
+      },
+      "matchWins": {
+        "tmbyt": 23,
+        "baba": 9,
+        "ties": 0
+      },
+      "eliteTurnMs": {
+        "median": 13.096097999999984,
+        "p95": 21.55099300000029,
+        "max": 29.80139699999927
+      }
+    },
+    {
+      "seed": 21000,
+      "pairs": 8,
+      "rounds": 5,
+      "mode": "teams",
+      "games": 80,
+      "roundWins": {
+        "tmbyt": 46,
+        "baba": 33,
+        "stock": 1
+      },
+      "points": {
+        "tmbyt": 1297,
+        "baba": 2800
+      },
+      "matchWins": {
+        "tmbyt": 12,
+        "baba": 4,
+        "ties": 0
+      },
+      "eliteTurnMs": {
+        "median": 13.227037000000564,
+        "p95": 21.32456600000023,
+        "max": 34.14405100000022
+      }
+    },
+    {
+      "seed": 51000,
+      "pairs": 4,
+      "rounds": 7,
+      "mode": "teams",
+      "games": 56,
+      "roundWins": {
+        "tmbyt": 29,
+        "baba": 27,
+        "stock": 0
+      },
+      "points": {
+        "tmbyt": 1040,
+        "baba": 1470
+      },
+      "matchWins": {
+        "tmbyt": 4,
+        "baba": 4,
+        "ties": 0
+      },
+      "eliteTurnMs": {
+        "median": 12.581344000000172,
+        "p95": 20.911815000000388,
+        "max": 32.57835100000011
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
+import { planEliteDiscard } from './elite-bot.js';
 // Decisions use only the bot's own tiles and publicly exposed tiles.
-export const BOT_LEVELS = ['fmi', 'bur', 'baba'];
+export const BOT_LEVELS = ['fmi', 'bur', 'baba', 'tmbyt'];
 const type = t => t.joker ? 52 : t.color * 13 + t.number - 1;
 const bits = mask => { let n=0; while(mask){mask&=mask-1;n++;} return n; };
 
@@ -26,6 +27,14 @@ export function analyseHand(hand, { level='bur', visible=[] }={}) {
   const memo=new Map([[0,{value:0,covered:0}]]);
   const weight=mask=>hand.reduce((sum,t,i)=>sum+((mask&(1<<i))?20+(t.joker?0:t.number*.1):0),0);
   const weights=new Map([...groups].map(m=>[m,weight(m)]));
+  const pointWeights=new Map([...groups].map(m=>[m,hand.reduce((sum,t,i)=>sum+((m&(1<<i))&&!t.joker?t.number:0),0)]));
+  const pointMemo=new Map([[0,0]]);
+  function coveredPoints(mask){
+    if(pointMemo.has(mask))return pointMemo.get(mask);
+    const i=31-Math.clz32(mask&-mask);let best=coveredPoints(mask&~(1<<i));
+    for(const g of containing[i])if((g&mask)===g)best=Math.max(best,pointWeights.get(g)+coveredPoints(mask^g));
+    pointMemo.set(mask,best);return best;
+  }
   function solve(mask) {
     if(memo.has(mask)) return memo.get(mask);
     const i=31-Math.clz32(mask&-mask);
@@ -66,14 +75,26 @@ export function analyseHand(hand, { level='bur', visible=[] }={}) {
     // A seven-pair plan competes with the meld plan rather than being ignored.
     return Math.max(value,pairs*36+wild*15-(bits(mask)-pairs*2-wild)*2);
   }
-  return { score, full };
+  function isWinning(mask=full){
+    if(bits(mask)!==14)return false;
+    if(bits(solve(mask).covered)===14)return true;
+    const counts=Array(53).fill(0);for(let i=0;i<n;i++)if(mask&(1<<i))counts[type(hand[i])]++;
+    return counts.slice(0,52).reduce((sum,n)=>sum+n%2,0)<=counts[52];
+  }
+  function deadwood(mask=full){
+    if(isWinning(mask))return 0;
+    return hand.reduce((sum,t,i)=>sum+((mask&(1<<i))&&!t.joker?t.number:0),0)-coveredPoints(mask);
+  }
+  return { score, full, deadwood, isWinning };
 }
 
-export function chooseDiscard(hand, {level='bur', visible=[], nextPickups=[], winning, random=Math.random}={}) {
+export function chooseDiscard(hand, options={}) {
+  const {level='bur', visible=[], nextPickups=[], winning, random=Math.random}=options;
   if(!BOT_LEVELS.includes(level))throw Error('Ungültige Bot-Stufe.');
   // Finish on every level; prefer a joker finish for the game's scoring rules.
   for(const t of [...hand].sort((a,b)=>Number(Boolean(b.joker))-Number(Boolean(a.joker))))
     if(winning(hand.filter(x=>x.id!==t.id)))return t;
+  if(level==='tmbyt')return planEliteDiscard(hand,options).tile;
   if(level==='fmi'&&random()<.35) {
     const choices=hand.filter(t=>!t.joker);return choices[Math.min(choices.length-1,Math.floor(random()*choices.length))]||hand[0];
   }

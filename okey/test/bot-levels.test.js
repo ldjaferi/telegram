@@ -12,8 +12,8 @@ test('difficulty defaults to bur, validates on creation/configuration, persists 
   assert.equal(r.botLevel,'bur');
   assert.throws(()=>a.configure('a',{botLevel:'omniscient'}));
   for(const level of BOT_LEVELS){a.configure('a',{botLevel:level});assert.equal(a.snapshot(r,'a').botLevel,level);}
-  a.start('a');assert.equal(r.botLevel,'baba');assert.throws(()=>a.configure('a',{botLevel:'fmi'}));
-  a.finish(r,null,'stock');r.matchComplete=true;a.newMatch('a');assert.equal(r.botLevel,'baba');
+  a.start('a');assert.equal(r.botLevel,'tmbyt');assert.throws(()=>a.configure('a',{botLevel:'fmi'}));
+  a.finish(r,null,'stock');r.matchComplete=true;a.newMatch('a');assert.equal(r.botLevel,'tmbyt');
   assert.throws(()=>a.create({id:'b',name:'B'},false,{botLevel:'invalid'}));
 });
 test('every level takes a certain win and prefers the joker scoring bonus',()=>{

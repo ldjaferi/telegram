@@ -57,7 +57,7 @@ test('shared Besa and excuses, tea receipt, thinking reminder and invalid-claim 
     assert.equal(room.players[0].out,false,'opening the action menu does not surrender');
     await capture(host,'action-menu');
     await host.keyboard.press('Escape');
-    await host.waitForFunction(()=>document.activeElement.id==='fun-button');
+    await host.waitForFunction(()=>document.activeElement.id==='fun-button'&&document.querySelector('#fun-button').getAttribute('aria-expanded')==='false');
     assert.equal(await host.locator('#fun-button').getAttribute('aria-expanded'),'false');
     await host.click('#fun-button'); await host.getByRole('button',{name:'Fuge drasen',exact:true}).click();
     await host.waitForSelector('#confirm-throw');

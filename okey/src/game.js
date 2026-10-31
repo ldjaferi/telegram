@@ -1,3 +1,4 @@
+import { createPublicMemory, recordPublicMove, chooseEliteDraw } from './elite-bot.js';
 import { BOT_LEVELS, analyseHand, chooseDiscard } from './bot-strategy.js';
 import { randomInt, randomBytes } from 'node:crypto';
 import { TEAM_QUESTIONS, TEAM_MESSAGE_MS } from '../public/team-chat.js';
@@ -101,7 +102,7 @@ export class Arena {
     if (this.rooms.size >= 10) throw Error('Alle Tische sind belegt.');
     let code; do { code = randomBytes(3).toString('hex').toUpperCase(); } while (this.rooms.has(code));
     const mode = options.mode ?? (solo ? 'individual' : 'teams'), roundLimit = options.roundLimit ?? 5, botLevel = options.botLevel ?? 'bur';
-    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur oder Si Baba.');
+    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur, Si Baba oder Ma mer mos luj se ki tmbyt.');
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
     const r = { botLevel, mode, roundLimit, roundLimitChosen: options.roundLimit !== undefined, scores: [], totals: Array(mode === 'teams' ? 2 : 4).fill(0), matchComplete: false, matchWinners: [], matchNumber: 1, code, owner: user.id, players: [this.player(user)], status: 'lobby', round: 0, events: [], seq: 0, humanActivity: this.now(), touched: this.now() };
     this.rooms.set(code, r);
@@ -198,7 +199,7 @@ export class Arena {
     const r = this.roomFor(id);
     if (!r || r.owner !== id || r.round !== 0) throw Error('Nur der Gastgeber kann vor der Partie die Regeln ändern.');
     const mode = options.mode ?? r.mode, roundLimit = options.roundLimit ?? r.roundLimit, botLevel = options.botLevel ?? r.botLevel ?? 'bur';
-    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur oder Si Baba.');
+    if (!BOT_LEVELS.includes(botLevel)) throw Error('Wähle Si fmi, Si bur, Si Baba oder Ma mer mos luj se ki tmbyt.');
     if (!['teams', 'individual'].includes(mode) || ![5, 7].includes(roundLimit)) throw Error('Wähle Teams oder Einzel und 5 oder 7 Runden.');
     r.botLevel = botLevel; r.mode = mode; r.roundLimit = roundLimit; if (options.roundLimit !== undefined) r.roundLimitChosen = true; r.totals = Array(mode === 'teams' ? 2 : 4).fill(0); r.touched = this.now();
   }
@@ -216,7 +217,7 @@ export class Arena {
     while (r.players.length < 4) { const i = r.players.length - 1; r.players.push(this.player({ id: `bot-${r.code}-${i}`, name: BOT_NAMES[i] }, true)); }
     const tiles = deck();
     for (let i = tiles.length - 1; i > 0; i--) { const j = randomInt(i + 1); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
-    r.pause=null; r.publicPickups = []; r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.winningHand = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
+    r.pause=null; r.publicMemory = createPublicMemory(); r.publicPickups = []; r.teamMessages = {}; r.round++; r.turn = (r.round - 1) % 4; r.phase = 'discard'; r.status = 'playing'; r.result = null; r.winningHand = null; r.discards = [[], [], [], []]; r.lastDiscard = null; r.lastDiscards = [null, null, null, null];
     r.shishaReadyAt = 0; r.nextPuffAt = this.now() + 14000 + randomInt(10000);
     for (let i = 0; i < 4; i++) { r.players[i].hand = tiles.splice(0, i === r.turn ? 15 : 14); r.players[i].out = false; r.players[i].lastDraw = null; }
     r.stock = tiles; this.deadline(r); this.event(r, 'start'); return r;
@@ -234,12 +235,14 @@ export class Arena {
     if (source === 'discard') {
       if (!r.lastDiscard || !r.discards[r.lastDiscard.seat].length) throw Error('Hier liegt kein Stein.');
       tile = r.discards[r.lastDiscard.seat].pop();
+      recordPublicMove(r.publicMemory,'pickup',r.turn,tile);
       (r.publicPickups ||= []).push({ seat: r.turn, tile });
       if (r.publicPickups.length > 106) r.publicPickups.shift();
       if (r.lastDiscards[r.lastDiscard.seat]) r.lastDiscards[r.lastDiscard.seat].taken = true;
       r.lastDiscard = null;
     } else {
       if (!r.stock.length) { this.finish(r, null, 'stock'); return; }
+      if(r.lastDiscard)recordPublicMove(r.publicMemory,'pass',r.turn,r.discards[r.lastDiscard.seat].at(-1));
       tile = r.stock.pop();
     }
     p.hand.push(tile); p.lastDraw = { id: tile.id, at: this.now() }; r.phase = 'discard'; r.botAt = this.now() + 700; r.touched = this.now();
@@ -252,6 +255,7 @@ export class Arena {
     const kind = winningHand(remaining);
     if (claim && !kind) throw Object.assign(Error('A budall ie a'), { code: 'invalid_claim' });
     const [tile] = p.hand.splice(index, 1); r.discards[r.turn].push(tile); r.lastDiscard = { seat: r.turn }; r.lastDiscards[r.turn] = { tile, taken: false };
+    recordPublicMove(r.publicMemory,'discard',r.turn,tile);
     this.event(r, 'discard', { player: id });
     if (claim && kind) { this.finish(r, p, kind, isWild(tile)); return; }
     this.next(r);
@@ -397,8 +401,18 @@ export class Arena {
         visible: [...r.discards.flat(), ...(r.publicPickups || []).map(e => e.tile)],
         nextPickups: r.mode === 'teams' && nextSeat % 2 === r.turn % 2 ? [] : (r.publicPickups || []).filter(e => e.seat === nextSeat).slice(-3).map(e => e.tile) };
 
+      if(strategy.level==='tmbyt')Object.assign(strategy,{
+        visible:Object.values(r.publicMemory?.seen||{}),memory:r.publicMemory,nextSeat,
+        nextIsPartner:r.mode==='teams'&&nextSeat%2===r.turn%2,
+        match:{totals:r.totals,index:r.mode==='teams'?r.turn%2:r.turn,round:r.round,roundLimit:r.roundLimit},
+        futureDraws:Math.min(2,Math.ceil(r.stock.length/r.players.filter(p=>!p.out).length))
+      });
+
       if (r.phase === 'draw') {
         const offer = r.lastDiscard ? r.discards[r.lastDiscard.seat].at(-1) : null;
+        if(p.bot&&strategy.level==='tmbyt'){
+          this.draw(p.id,chooseEliteDraw(p.hand,offer,strategy));changed.add(r);continue;
+        }
         const candidate = offer ? [...p.hand, offer] : null;
         const bestDiscard = candidate ? (p.bot ? chooseDiscard(candidate, strategy) : botDiscard(candidate)) : null;
         const remainder = candidate?.filter(t => t.id !== bestDiscard.id);
