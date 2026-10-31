@@ -245,7 +245,7 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
 .score-table th,.score-table td{padding:10px 12px;text-align:right;border-bottom:1px solid #bca87d44}.score-table th:first-child{text-align:left}
 .score-table thead,.score-table tfoot{background:#ddbd741a}.score-table tfoot{font-weight:bold;color:#f6d98f}.score-note,.score-members{font-size:12px;line-height:1.7}
 .tile.newly-drawn{outline:3px solid #ffd86a;outline-offset:1px;animation:draw-glow .65s ease-in-out 6;z-index:4!important}
-.new-tile-badge{position:absolute;top:1px;right:1px;z-index:4;border-radius:3px;background:#ffdf7a;color:#3a280a;font:700 8px/1.2 sans-serif;padding:2px;pointer-events:none}
+.new-tile-badge{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:6px;height:6px;z-index:4;border-radius:50%;background:#ffdf7a;pointer-events:none}
 @keyframes draw-glow{50%{box-shadow:0 0 18px 5px #ffd86aaa}}
 .joker-finale{animation:joker-table-spin 2.6s ease-in-out;z-index:20}
 .joker-finale-banner{display:grid;gap:8px;padding:22px;border:2px solid #ffdc75;border-radius:14px;background:#153d32f2;color:#ffe398;text-align:center;box-shadow:0 0 60px #ffcf7277}
@@ -274,7 +274,7 @@ body[data-stage=welcome] #table-actions,body[data-stage=lobby] #table-actions{di
 .match-settings-summary,.score-note,.score-members,.welcome-sub,.result-copy,.joker-hint{font-size:14px;line-height:1.45}
 .pile-unit>span,.round-pill,.in-game .round-pill{font-size:12px;line-height:1.35;letter-spacing:0}
 .winning-group h3,.winning-tile small,#bluff-hint,#shisha-hint{font-size:13px}
-#rack .rack-engraving{font-size:11px}.new-tile-badge{font-size:10px}
+#rack .rack-engraving{font-size:11px}
 #tools-dialog .gestures b,#tools-dialog .throw-button small,#tools-dialog footer{font-size:13px}
 #scores-button,#tools-button,.welcome-buttons .button,.play-actions .button{font-size:15px}
 @media(max-width:1000px),(max-height:540px){
