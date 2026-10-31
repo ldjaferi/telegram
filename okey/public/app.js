@@ -84,6 +84,11 @@ tileActions.id = 'tile-action-popover';
 tileActions.setAttribute('role', 'group');
 tileActions.setAttribute('aria-label', 'Aktionen für den ausgewählten Stein');
 tileActions.hidden = true;
+const tileMoveHint = document.createElement('span');
+tileMoveHint.className = 'tile-move-hint';
+tileMoveHint.textContent = 'Einzeln ziehen · Kombi halten & ziehen';
+tileMoveHint.hidden = true;
+tileActions.append(tileMoveHint);
 tileActions.append($('#discard'), $('#claim'));
 const dismissTileAction = document.createElement('button');
 dismissTileAction.type = 'button';
@@ -99,9 +104,10 @@ function dismissTileActions(restoreFocus = false) {
   renderRack();
   if (restoreFocus) [...document.querySelectorAll('#rack-tiles [data-tile]')].find(el => el.dataset.tile === previous)?.focus({ preventScroll: true });
 }
-// Capture before the rack's click-to-place handler: an outside tap dismisses.
+// A tap on a free board position places the selected tile; outside the board
+// it only dismisses the selection.
 document.addEventListener('pointerdown', event => {
-  if (!selected || event.target.closest('#tile-action-popover, #rack-tiles [data-tile]')) return;
+  if (!selected || event.target.closest('#tile-action-popover, #rack')) return;
   dismissTileActions();
 }, true);
 document.body.append(tileActions);
@@ -109,6 +115,7 @@ $('#play-actions').classList.add('tile-actions-placeholder');
 function positionTileActions() {
   const tile = [...document.querySelectorAll('#rack-tiles [data-tile]')].find(el => el.dataset.tile === selected);
   if (!tile || !connected || room?.status !== 'playing' || me()?.out || freeRack.drag) { tileActions.hidden = true; return; }
+  tileMoveHint.hidden = !freeRack.bundle(selected);
   tileActions.hidden = false;
   const rect = tile.getBoundingClientRect(), menu = tileActions.getBoundingClientRect();
   const viewport = window.visualViewport;
@@ -400,7 +407,7 @@ function renderActions() {
   $('#throw').disabled = !connected || room?.paused || room?.status !== 'playing' || me()?.out;
   $('#fun-button').disabled = !connected || !room;
   $('#leave').hidden = !room;
-  $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Mshile“ die Runde beenden' : room?.status === 'playing' ? 'Passende Steine verbinden sich · einzeln lösen: antippen, dann ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
+  $('#selection-hint').textContent = selected ? 'Ausgewählt · Abwerfen oder mit „Mshile“ die Runde beenden' : room?.status === 'playing' ? 'Einzeln ziehen · ganze Kombi kurz halten und ziehen' : 'Steine antippen · zum Sortieren ziehen oder Pfeiltasten nutzen';
   for (const button of document.querySelectorAll('[data-gesture]')) button.disabled = !connected || !room || funBlocked();
   $('[data-gesture=besa]').disabled = !connected || funBlocked() || room?.status !== 'playing' || me()?.out;
   renderBluff();
@@ -611,7 +618,7 @@ $('#leave').onclick = () => {
   modal('<h2>Schon Feierabend?</h2><p>Beim Verlassen gibst du diese Runde auf. Die anderen spielen weiter.</p><button id="confirm-leave" class="button primary">Tisch verlassen</button>');
   $('#confirm-leave').onclick = () => { send('leave'); $('#modal').close(); };
 };
-$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Eine verbundene Kombination kannst du gemeinsam ziehen. Zum Herauslösen einen einzelnen Stein zuerst antippen und dann ziehen. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf deinen menschlichen Teampartner für die privaten Fragen „A ta msheli“ und „Si je?“. Gegner kannst du weiterhin als Ziel für Gesten auswählen.</li><li><strong>Besa:</strong> Über den Blitz bei den Aktionen kannst du behaupten: „Besa, ich habe keinen Joker!“ – ob es stimmt, weisst nur du. Nach einer Niederlage findest du beim Ergebnis eine Ausrede und die Çay-Rechnung. Die meisten Strafpunkte zahlen scherzhaft den Çay; bei Gleichstand wird geteilt.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Fuge drasen“ im Blitz-Menü gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
+$('#rules').onclick = () => modal(`<p class="eyebrow">FESTE JOKER. EXTRA FRECHHEIT.</p><h2>So läuft die Runde.</h2><ul><li>Du hältst 14 Steine. Wer beginnt, hat 15 und wirft zuerst ab. Danach immer einen Stein ziehen und einen abwerfen.</li><li>Gewinne mit Reihen derselben Farbe (z. B. 3–4–5), Gruppen derselben Zahl in verschiedenen Farben oder sieben identischen Paaren. 12–13–1 ist erlaubt, 13–1–2 nicht.</li><li>Die zwei Steine mit Brustmotiv sind immer Joker und ersetzen beliebige Steine. Alle Zahlensteine behalten ihren aufgedruckten Wert. Es gibt keinen Anzeiger.</li><li>Neben jedem Gegner siehst du seinen letzten Abwurf, deinen eigenen in der Mitte. Ein ↗ bedeutet: Dieser Abwurf wurde bereits genommen. Aufnehmen kannst du nur den aktuell angebotenen Stein unter „NEHMEN“.</li><li>Wähle deinen letzten Abwurf und drücke <strong>Mshile</strong>. Der Server prüft deine übrigen 14 Steine.</li><li>Steine auf dem Holzbrett ziehen: Beim Ablegen rasten sie ohne Überlappung auf den beiden Leisten ein. Passende Reihen, Gruppen und Paare verbinden sich magnetisch und werden grün markiert. Direktes Ziehen bewegt immer einen einzelnen Stein, auch aus einer Kombination. Halte einen Stein kurz gedrückt, bis die ganze Kombi gold umrandet ist; dann kannst du sie gemeinsam ziehen. Beim Herauslösen zieht dich der Magnet nicht in die alte Kombi zurück. Alternativ antippen und an einer freien Stelle ablegen; die Pfeiltasten bewegen den gewählten Stein.</li><li>Tippe auf deinen menschlichen Teampartner für die privaten Fragen „A ta msheli“ und „Si je?“. Gegner kannst du weiterhin als Ziel für Gesten auswählen.</li><li><strong>Besa:</strong> Über den Blitz bei den Aktionen kannst du behaupten: „Besa, ich habe keinen Joker!“ – ob es stimmt, weisst nur du. Nach einer Niederlage findest du beim Ergebnis eine Ausrede und die Çay-Rechnung. Die meisten Strafpunkte zahlen scherzhaft den Çay; bei Gleichstand wird geteilt.</li><li><strong>Joker-Bluff:</strong> Nur mit einem Joker auf deinem Brett. Alle sehen eine wackelnde Comic-Männerbrust und deine Ansage „Ich hab einen Joker!“. Deine Hand bleibt verdeckt; nach acht Sekunden kannst du wieder bluffen.</li><li><strong>Fester Zug:</strong> Alle sehen drei Sekunden lang Shisha-Rauch. Er löst sich von selbst auf. Die Pause gilt für den ganzen Tisch: ein grosser Zug alle 15 Sekunden. Kleine Züge passieren gelegentlich automatisch; Steine und Züge werden davon nicht verändert.</li><li>„Fuge drasen“ im Blitz-Menü gibt die Runde auf. Du hast 120 Sekunden pro Zug für Ziehen und Abwerfen zusammen. Danach wird automatisch gespielt. Wer zuletzt übrig bleibt, gewinnt.</li></ul><p>Vor der Partie wählt ihr 5 oder 7 Runden. Gegenüberliegende Plätze bilden im Teammodus Team A und B. Die beste Kombinationseinteilung wird automatisch ermittelt; übrige Zahlenwerte zählen als Strafpunkte. Einzelne Paare zählen nur in einer vollständigen Sieben-Paare-Hand. Das Gewinnerteam bekommt 0 Punkte; beim Joker als letztem Abwurf −10, die Gegner doppelte Restpunkte. Ein nicht verwendbarer Joker zählt 0. Ist der Vorrat leer, zählt jeder seine Restpunkte. Bei Gleichstand teilen sich die Teams den Sieg. Die niedrigste Summe gewinnt.</p>`);
 
 render(); connect();
 

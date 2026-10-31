@@ -54,3 +54,24 @@ test('the moved middle tile bridges its old gap and prefers a natural run over a
  const result=dropRack(hand,p,['0-0-2'],{x:120/b.w,y:0},b);
  safe(hand,result.positions);assert.equal(result.match.kind,'run');assert.deepEqual(result.match.ids,['0-0-1','0-0-2','0-0-3']);
 });
+
+test('extracting beside the old run does not snap back, but a later drop can rejoin it',()=>{
+ const hand=[tile(1),tile(2),tile(3)];
+ const p=Object.fromEntries(hand.map((t,i)=>[t.id,{x:i*38/b.w,y:0}]));
+ const id=hand[1].id,destination={x:110/b.w,y:0};
+ assert.equal(dropRack(hand,p,[id],destination,b).match?.complete,true,'reproduces the old sticky magnet');
+ const extracted=dropRack(hand,p,[id],destination,b,{avoidIds:hand.map(t=>t.id)});
+ safe(hand,extracted.positions);assert.equal(extracted.match,null);
+ assert.ok(!rackBundles(hand,extracted.positions,b).some(g=>g.complete&&g.ids.includes(id)));
+ const rejoined=dropRack(hand,extracted.positions,[id],{x:38/b.w,y:0},b);
+ safe(hand,rejoined.positions);assert.equal(rejoined.match?.complete,true);
+});
+test('an extracted tile or joker can immediately join a different combination',()=>{
+ for(const moving of [tile(3),{id:'joker',joker:true}]){
+  const hand=[tile(1),tile(2),moving,tile(4),tile(5)];
+  const p=Object.fromEntries(hand.map((t,i)=>[t.id,{x:(i%3)*38/b.w,y:i<3?0:1}]));
+  const result=dropRack(hand,p,[moving.id],{x:65/b.w,y:1},b,{avoidIds:hand.slice(0,3).map(t=>t.id)});
+  safe(hand,result.positions);assert.equal(result.match?.complete,true);
+  assert.deepEqual(new Set(result.match.ids),new Set([moving.id,hand[3].id,hand[4].id]));
+ }
+});

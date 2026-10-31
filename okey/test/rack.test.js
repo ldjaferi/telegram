@@ -36,3 +36,26 @@ test('contact feedback only fires for a new neighbour, including a move between 
   assert.equal(newRackContact(group,{...group,a:{x:.2,y:0},b:{x:.365,y:0}},['a','b'],b),false);
   assert.equal(newRackContact(group,group,['a'],b),false);
 });
+
+function bundledFixture(){
+  const f=fixture();f.rack.hand=[{id:'a',color:0,number:1},{id:'b',color:0,number:2},{id:'c',color:0,number:3}];
+  f.rack.positions={a:{x:.2,y:0},b:{x:.365,y:0},c:{x:.53,y:0}};
+  return f;
+}
+test('direct dragging extracts one tile and holding after movement cannot grab its neighbours',t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=bundledFixture();f.rack.down(f.event());f.rack.move(f.event(12,105));
+  t.mock.timers.tick(500);assert.deepEqual(f.rack.drag.ids,['a']);
+  f.rack.up(f.event(12,105));
+  assert.equal(f.rack.positions.a.y,1);assert.equal(f.rack.positions.b.y,0);assert.equal(f.rack.positions.c.y,0);
+});
+test('holding a combination grips the whole group; cancellation and quick taps clear the hold timer',t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=bundledFixture();f.rack.down(f.event());t.mock.timers.tick(350);
+  assert.deepEqual(f.rack.drag.ids,['a','b','c']);
+  f.rack.move(f.event(12,105));f.rack.up(f.event(12,105));
+  assert.ok(Object.values(f.rack.positions).every(p=>p.y===1));
+  f.rack.down(f.event());f.rack.cancel();t.mock.timers.tick(500);assert.equal(f.rack.drag,null);
+  f.rack.down(f.event());f.rack.up(f.event());t.mock.timers.tick(500);assert.equal(f.rack.drag,null);
+  assert.equal(f.moves,1);assert.equal(f.taps,1);
+});
