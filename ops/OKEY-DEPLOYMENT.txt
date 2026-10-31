@@ -515,3 +515,30 @@ Steinaktionen nur durch Antippen – LIVE am 31.10.2026:
   /home/debian/before-cc528f3. Öffentliche HTTPS-Datei bytegleich, Healthcheck OK;
   okey/gamebot/caddy aktiv und unveränderte PIDs. Keine laufenden Tische beendet.
   Remote-Commander-Sudo-Sperre danach wiederhergestellt und abgeglichen.
+
+Auf Freunde warten statt automatisch Bots starten – LIVE am 31.10.2026:
+- Release d8589c2 auf main und https://gjurzi.xhaferi.al/.
+- „Mit Freunden“ fragt die Regeln einmal ab und öffnet den wartenden Tisch.
+  Oben stehen belegte menschliche Plätze sowie „Mit Bots beginnen“ und
+  „Weiter warten“. Warten teilt keine Steine aus und startet keine Runde.
+- Bei vier menschlich besetzten Plätzen erscheint „Partie starten“; auch dann
+  startet nur der Gastgeber. Reservierte Offline-Plätze bleiben menschliche
+  Plätze und werden durch diese Auswahl nicht automatisch ersetzt.
+- Speichern der Einstellungen startet nicht mehr. Erneutes Öffnen ist optional
+  über „Einstellungen ändern“. Telegram-Tische ohne Rundenauswahl fragen zuerst
+  einmal „Runden wählen“. Neue Partien wählen ihre Rundenzahl erneut.
+- Server verlangt für die erste Runde bei freien/Bot-Plätzen withBots === true;
+  alte/unbestätigte Startanfragen werden abgelehnt. Solo und Folgerunden bleiben
+  unverändert. Gastgeberprüfung und spätere Bot-Übernahme bleiben erhalten.
+- 87 Modul-/Servertests grün. 21 Browserszenarien abgedeckt; nach Anpassung der
+  Rückkehr-Testfixture auf echte beitretende Clients die vier relevanten Tests
+  erneut bestanden. Alle elf Layoutgrössen sowie Warten/Neuladen, Regeln speichern,
+  vier Freunde und expliziter Bot-Start geprüft. Mobile Warteansicht visuell geprüft.
+- public/app.js und src/server.js mit alten/neuen Hashes und Remote-Syntaxprüfung
+  installiert; bisherigen CRLF-Serverstand berücksichtigt.
+  Rückfallkopie /home/debian/before-d8589c2. Nur okey.service neu gestartet;
+  laufende Tische dadurch beendet. gamebot/caddy aktiv mit unveränderten PIDs.
+  Öffentliche app.js über HTTPS bytegleich, Healthcheck OK. Remote-Commander-
+  Befehlsperren vollständig wiederhergestellt und erneut abgeglichen.
+- Differenzpaket artifacts/gjurzi-update-d8589c2.json.gz;
+  SHA256 71585a3c749b869b7b242f8f8986c91db814ae3ae1a1ff9086a8459af2a7b0d2.
