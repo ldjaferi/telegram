@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rackMatch, rackBundles, settleRack, dropRack } from '../public/rack.js';
+import { rackMatch, rackBundles, settleRack, dropRack, freeRackTiles, arrangeFreeTiles } from '../public/rack.js';
 const tile=(number,color=0,copy=0)=>({id:`${copy}-${color}-${number}`,number,color});
 const b={w:281,tw:35,h:70,th:46};
 function safe(hand,p,bounds=b){
@@ -73,5 +73,35 @@ test('an extracted tile or joker can immediately join a different combination',(
   const result=dropRack(hand,p,[moving.id],{x:65/b.w,y:1},b,{avoidIds:hand.slice(0,3).map(t=>t.id)});
   safe(hand,result.positions);assert.equal(result.match?.complete,true);
   assert.deepEqual(new Set(result.match.ids),new Set([moving.id,hand[3].id,hand[4].id]));
+ }
+});
+
+test('sorting only free tiles preserves runs, joker groups and pairs at their exact positions',()=>{
+ const hand=[tile(1),tile(2),tile(3),tile(9,1),tile(2,2),tile(10,2),{id:'joker',joker:true},tile(12,2),tile(6),tile(4),tile(5),tile(7,1),tile(7,1,1),tile(1,1),tile(3,3)];
+ const p=Object.fromEntries(hand.map((t,i)=>[t.id,{x:((i%8)*38+(i>=9?6:0)+(i>=10?6:0))/b.w,y:i<8?0:1,z:1}]));
+ safe(hand,p);
+ const kept=new Set(rackBundles(hand,p,b).filter(g=>g.complete).flatMap(g=>g.ids));assert.equal(kept.size,8);
+ const free=freeRackTiles(hand,p,b),ordered=[...free].sort((a,c)=>a.number-c.number||a.color-c.color);
+ const result=arrangeFreeTiles(hand,p,ordered.map(t=>[t]),b);safe(hand,result);
+ for(const id of kept)assert.deepEqual(result[id],p[id]);
+ const visual=free.slice().sort((a,c)=>result[a.id].y-result[c.id].y||result[a.id].x-result[c.id].x);
+ assert.deepEqual(visual.map(t=>t.id),ordered.map(t=>t.id));
+ assert.deepEqual(settleRack(hand,result,b,b),result,'subsequent renders do not repack fixed combinations');
+ const run=[tile(4),tile(5),tile(6)],combined=arrangeFreeTiles(hand,p,[run,...free.filter(t=>!run.some(r=>r.id===t.id)).map(t=>[t])],b);
+ safe(hand,combined);for(const id of kept)assert.deepEqual(combined[id],p[id]);
+ assert.ok(rackBundles(hand,combined,b).some(g=>g.complete&&run.every(t=>g.ids.includes(t.id))),'new free combination occupies an available gap');
+});
+
+test('only-free sorting handles full combinations and crowded boards without losing tiles',()=>{
+ const all=[tile(1),tile(2),tile(3)],fixed=Object.fromEntries(all.map((t,i)=>[t.id,{x:i*38/b.w,y:0}]));
+ assert.deepEqual(freeRackTiles(all,fixed,b),[]);assert.deepEqual(arrangeFreeTiles(all,fixed,[],b),fixed);
+ let seed=37;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+ const hand=Array.from({length:15},(_,i)=>tile(i%13+1,Math.floor(i/13)));
+ let p=settleRack(hand,{},b);
+ for(let i=0;i<100;i++){
+   const id=hand[Math.floor(rand()*hand.length)].id;p=dropRack(hand,p,[id],{x:rand(),y:rand()},b).positions;
+   const free=freeRackTiles(hand,p,b),kept=hand.filter(t=>!free.includes(t));
+   const sorted=arrangeFreeTiles(hand,p,[...free].reverse().map(t=>[t]),b);safe(hand,sorted);
+   for(const t of kept)assert.deepEqual(sorted[t.id],p[t.id]);p=sorted;
  }
 });

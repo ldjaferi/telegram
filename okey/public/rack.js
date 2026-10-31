@@ -99,10 +99,55 @@ function pack(units,original,b){
   return positions;
 }
 export function settleRack(hand,positions,b,previousBounds=b){
+  // A valid board needs no repacking on every server update. In particular,
+  // sorting free tiles must not shift the combinations the player kept.
+  if(['w','h','tw','th'].every(key=>b[key]===previousBounds[key]) && hand.every(t=>{
+    const p=positions[t.id];return p&&Number.isFinite(p.x)&&p.x>=0&&p.x<=1&&[0,1].includes(p.y);
+  }) && hand.every((t,i)=>hand.slice(i+1).every(other=>{
+    const p=positions[t.id],q=positions[other.id];return p.y!==q.y||Math.abs(p.x-q.x)*b.w>=b.tw+GAP-1e-6;
+  })))return Object.fromEntries(hand.map(t=>[t.id,{...positions[t.id]}]));
   const cap=capacity(b), current={};let index=0;
   for(const t of hand){const p=positions[t.id];current[t.id]=p?{...p,x:clamp(p.x),y:rowOf(p)}:{x:(index%cap)/Math.max(1,cap-1),y:Math.floor(index/cap)%2,z:1};index++}
   const units=makeUnits(hand,current,previousBounds);for(const unit of units)unit.x*=b.w/previousBounds.w;
   return pack(units,current,b);
+}
+export function freeRackTiles(hand,positions,b){
+  const kept=new Set(rackBundles(hand,positions,b).filter(g=>g.complete).flatMap(g=>g.ids));
+  return hand.filter(t=>!kept.has(t.id));
+}
+export function arrangeFreeTiles(hand,positions,groups,b){
+  const free=new Set(freeRackTiles(hand,positions,b).map(t=>t.id));
+  if(!free.size)return positions;
+  const intervals=[];
+  for(let row=0;row<2;row++){
+    const fixed=hand.filter(t=>!free.has(t.id)&&rowOf(positions[t.id])===row).sort((a,c)=>positions[a.id].x-positions[c.id].x);
+    let left=0;
+    for(const tile of [...fixed,null]){
+      const right=tile?positions[tile.id].x*b.w-GAP:b.w+b.tw;
+      const slots=Math.floor((right-left+GAP+1e-6)/(b.tw+GAP));
+      if(slots>0)intervals.push({row,left,slots});
+      if(tile)left=positions[tile.id].x*b.w+b.tw+GAP;
+    }
+  }
+  const result=Object.fromEntries(hand.map(t=>[t.id,{...positions[t.id]}])),seen=new Set();
+  const units=groups.map(group=>{
+    const ids=[];
+    for(const tile of group)if(free.has(tile.id)&&!seen.has(tile.id)){seen.add(tile.id);ids.push(tile.id)}
+    return ids;
+  }).filter(ids=>ids.length);
+  for(const id of free)if(!seen.has(id))units.push([id]);
+  for(const ids of units){
+    while(ids.length){
+      // Keep a new combination together where a gap can fit it. If the fixed
+      // groups leave only smaller gaps, split across them without moving those groups.
+      const gap=intervals.find(g=>g.slots>=ids.length)||intervals.find(g=>g.slots>0);
+      if(!gap)throw Error('Kein Platz für die freien Steine.');
+      const batch=ids.splice(0,gap.slots);
+      batch.forEach((id,i)=>{result[id]={...result[id],x:clamp((gap.left+i*(b.tw+GAP))/b.w),y:gap.row}});
+      gap.left+=batch.length*(b.tw+GAP);gap.slots-=batch.length;
+    }
+  }
+  return result;
 }
 export function dropRack(hand,positions,movingIds,destination,b,{avoidIds=[]}={}){
   const byId=tileMap(hand), moving=movingIds.filter(id=>byId.has(id));
@@ -153,6 +198,8 @@ export class FreeRack {
   save(){try{sessionStorage.setItem('okey-rack:'+this.key,JSON.stringify({key:this.key,positions:this.positions,bounds:this.lastBounds}))}catch{}}
   reset(){this.positions={};this.save()}
   bundle(id){return rackBundles(this.hand,this.positions,this.bounds()).find(g=>g.complete&&g.ids.includes(id))}
+  freeTiles(){return freeRackTiles(this.hand,this.positions,this.bounds())}
+  arrangeFree(groups){this.cancel();const b=this.bounds();this.positions=arrangeFreeTiles(this.hand,this.positions,groups,b);this.lastBounds=b;this.paint(this.positions,b);this.save()}
   arrange(groups){
     this.cancel(); const b=this.bounds(); let index=0;
     const units=groups.filter(g=>g.length).map(group=>{const start=index;index+=group.length;return {ids:group.map(t=>t.id),row:start<Math.ceil(this.hand.length/2)?0:1,x:(start%Math.ceil(this.hand.length/2))*(b.tw+SEPARATION)}});

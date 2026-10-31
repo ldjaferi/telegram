@@ -914,3 +914,13 @@ body[data-stage=lobby] .match-settings-summary{display:block;flex-basis:100%;fon
 
 /* Reuse the existing status row; the avatar also opens the host confirmation. */
 .seat-release{display:inline;background:none;border:0;padding:0;color:var(--gold,#e5c17c);font:inherit;line-height:inherit;letter-spacing:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+/* Sorting stays in the existing metadata row, without a message over the rack. */
+.rack-sort{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.rack-sort .sort-free{display:flex;align-items:center;gap:4px;min-height:28px;font-size:12px;white-space:nowrap;cursor:pointer;letter-spacing:0}
+.sort-free input{width:16px;height:16px;margin:0;accent-color:#e1bc76;flex-shrink:0}
+@media(max-width:1000px),(max-height:540px){
+  .rack-meta .rack-sort{grid-column:1/-1;grid-row:2;gap:4px;width:100%}
+  body .rack-meta .rack-sort .text-button{font-size:12px;padding:2px 5px;min-width:0;min-height:26px;white-space:nowrap}
+  .rack-sort .sort-free{font-size:12px;min-height:26px}
+}
