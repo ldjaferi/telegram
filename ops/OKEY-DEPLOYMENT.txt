@@ -502,3 +502,16 @@ Browser-Rückkehr und Offline-Platz direkt freigeben – LIVE am 31.10.2026:
   Remote-Commander-Befehlsperren vollständig wiederhergestellt und abgeglichen.
 - Differenzpaket: artifacts/gjurzi-update-93c648d.json.gz;
   SHA256 b97dfe69f03c07400f6ac45384663437113a2ea7df02176b5c6de134b32fec64.
+
+Steinaktionen nur durch Antippen – LIVE am 31.10.2026:
+- Release cc528f3 auf main und https://gjurzi.xhaferi.al/.
+- Verschieben hebt die Steinauswahl auf: Mshile/Fuge gjurin bleiben nach Ziehen,
+  Kombi-Verschieben, Tippen auf freies Holz und Pfeiltasten geschlossen.
+  Erneutes Antippen/Anklicken öffnet die Aktionen wie bisher. Bestehende
+  Unterdrückung des Browser-Klicks nach einer Ziehbewegung bleibt erhalten.
+- 13 Chromium-Browsertests bestanden: Maus und Touch, Einzelstein/Kombi,
+  Tippen zum Platzieren, Tastatur und elf Bildschirmgrössen. JS-Syntax geprüft.
+- Nur public/app.js ersetzt. Alte/neue Hashes geprüft, Rückfallkopie
+  /home/debian/before-cc528f3. Öffentliche HTTPS-Datei bytegleich, Healthcheck OK;
+  okey/gamebot/caddy aktiv und unveränderte PIDs. Keine laufenden Tische beendet.
+  Remote-Commander-Sudo-Sperre danach wiederhergestellt und abgeglichen.
