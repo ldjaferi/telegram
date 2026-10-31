@@ -55,6 +55,7 @@ for (const touch of [true, false]) test(`extracting and holding combinations wit
     assert.deepEqual(after['run-1'],before['run-1']);assert.deepEqual(after['run-3'],before['run-3']);
     assert.equal(await page.locator('[data-tile=run-2]').getAttribute('class').then(c=>c.includes('bundled')),false);
     assert.equal(await page.locator('#rack-tiles [data-tile]').count(),15);
+    assert.equal(await page.locator('#tile-action-popover').isVisible(),false,'dragging a tile does not open game actions');
     await capture('extracted');
 
     await reset();tile=await page.locator('[data-tile=run-2]').boundingBox();before=await boxes();
@@ -64,6 +65,7 @@ for (const touch of [true, false]) test(`extracting and holding combinations wit
     for(const id of ['run-1','run-2','run-3'])assert.ok(after[id].x>before[id].x+20,'whole combination moves');
     assert.ok(Math.abs((after['run-2'].x-after['run-1'].x)-(before['run-2'].x-before['run-1'].x))<1);
     assert.equal(await page.locator('.group-grabbed').count(),0,'grip highlight clears after release');
+    assert.equal(await page.locator('#tile-action-popover').isVisible(),false,'moving a combination keeps game actions closed');
 
     // The selected tile also offers a tap-to-place alternative on blank wood.
     await reset();if(touch)await page.locator('[data-tile=run-2]').tap();else await page.locator('[data-tile=run-2]').click();
@@ -73,6 +75,11 @@ for (const touch of [true, false]) test(`extracting and holding combinations wit
     else await page.mouse.click(layer.x+layer.width-tile.width/2-1,layer.y+tile.height/2);
     after=await boxes();assert.ok(after['run-2'].x>tile.width*2,'tap-to-place detaches the selected tile');
     assert.equal(await page.locator('[data-tile=run-2].bundled').count(),0);
+    assert.equal(await page.locator('#tile-action-popover').isVisible(),false,'tap-to-place closes game actions after moving');
+    if(touch)await page.locator('[data-tile=run-2]').tap();else await page.locator('[data-tile=run-2]').click();
+    await page.waitForSelector('#tile-action-popover:not([hidden])');
+    await page.locator('[data-tile=run-2]').press('ArrowLeft');
+    assert.equal(await page.locator('#tile-action-popover').isVisible(),false,'keyboard movement also closes game actions');
     assert.deepEqual(errors,[]);
   } finally {await browser.close();await app.close();}
 });

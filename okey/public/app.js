@@ -50,7 +50,7 @@ let lastTeamVersion = '', teamMessageTimer;
 let newTileId = null, newTileKey = '', newTileTimer, jokerTimer;
 let muted = localStorage.getItem('okey-muted') === 'true', audio, music, tileClack;
 let audioUnlocked = false, suppressClickUntil = 0;
-const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=move?.group?null:id; suppressClickUntil=Date.now()+400; renderRack(); if(move?.contact&&!muted&&!document.hidden)tileClack?.play(); } });
+const freeRack = new FreeRack($('#rack'), { markup: tileMarkup, selected: () => selected, onSelect: id => { selected=selected===id?null:id; suppressClickUntil=Date.now()+400; renderRack(); }, onMove: (id, move) => { selected=null; suppressClickUntil=Date.now()+400; renderRack(); if(move?.contact&&!muted&&!document.hidden)tileClack?.play(); } });
 // Keep the existing wire ID so active rooms can receive the replacement action without a restart.
 $('[data-gesture="fart"] span').innerHTML = juiceArt;
 $('[data-gesture="tea"] span').innerHTML = cayArt;

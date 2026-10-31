@@ -178,6 +178,9 @@ for (const viewport of viewports) test(`welcome, lobby, play, resize and results
     const after = await page.locator(`[data-tile="${id}"]`).boundingBox();
     assert.ok(Math.abs(after.x - before.x) > 10, 'touch can move a tile across the board');
     assertPlaying(await geometry(page));
+    assert.equal(await page.locator('#tile-action-popover').isVisible(), false, 'dragging closes tile actions');
+    await page.locator(`[data-tile="${id}"]`).tap();
+    await page.waitForSelector('#tile-action-popover:not([hidden])');
     await page.click('.tile-action-dismiss');
     assert.equal(await page.locator('#tile-action-popover').isVisible(), false, 'tile menu can be dismissed before sorting');
     await page.click('#sort-combinations'); assertPlaying(await geometry(page));
