@@ -474,3 +474,31 @@ Gezogenen Stein markieren und offene Updates – ausgerollt am 31.10.2026:
 - Lokales Differenzpaket: artifacts/gjurzi-update-220bd15.json.gz;
   SHA256 8b0b717975e94e16693ae9a9031350a24df145eb48f8aea44d86bbfbee3f3bd8.
   Staging und Installationsskript: /home/debian/gjurzi-220bd15.
+
+Browser-Rückkehr und Offline-Platz direkt freigeben – LIVE am 31.10.2026:
+- Release 93c648d auf main und unter https://gjurzi.xhaferi.al/ eingespielt.
+- Verifizierte Browser-Gastanmeldung in localStorage statt nur sessionStorage.
+  Tab schliessen und Einladung im selben Browser erneut öffnen stellt den
+  bisherigen Sitz inklusive Hand, Team, Punkten und Gastgeberrechten wieder her.
+  Bestehende Tab-Anmeldungen werden beim Neuladen migriert. Telegram meldet seine
+  signierte Identität getrennt an und überschreibt den Browser-Gast nicht.
+- Abgelaufene/ungültige Tokens werden verworfen; Namenseingabe funktioniert
+  danach wieder. Kein Wiedererkennen allein anhand des Namens. Bestehende
+  Server-Sitzungsdauer von 12 Stunden unverändert, keine Übertragung auf andere
+  Browser/Geräte. Bereits verlorene alte Tab-Tokens sind nicht rekonstruierbar.
+- Gastgeber kann Offline-Figur oder „OFFLINE · FREIGEBEN“ anklicken. Bestehende
+  Bestätigung und Server-Rechteprüfung greifen weiterhin. Ein Bot übernimmt
+  Hand/Punkte; ein neuer Freund kann diesen Platz per Einladung auswählen.
+  Bisherige Sperre entfernter Spieler für diese Partie bleibt erhalten.
+- 19 Chromium-Browsertests bestanden, darunter geschlossener Tab, gespeicherter
+  Browserzustand, voller/gesperrter Tisch, Gastgeber-Rückkehr, Legacy-Migration,
+  ungültige Tokens, signierte Telegram-Identität, Entfernen und Bot-Übernahme.
+  17 relevante Server-/Host-Tests sowie Syntaxprüfungen bestanden. Mobile
+  Offline-Anzeige visuell geprüft; vollständige Layoutsuite mit elf Grössen.
+- Drei Public-Dateien mit vorherigen/neuen SHA256-Werten geprüft und atomar
+  ersetzt. Rückfallkopie: /home/debian/before-93c648d. Kein Dienstneustart;
+  laufende Tische bleiben bestehen. okey/gamebot/caddy aktiv, PIDs unverändert.
+  Öffentliche HTTPS-Antworten bytegleich zum Release, Healthcheck OK.
+  Remote-Commander-Befehlsperren vollständig wiederhergestellt und abgeglichen.
+- Differenzpaket: artifacts/gjurzi-update-93c648d.json.gz;
+  SHA256 b97dfe69f03c07400f6ac45384663437113a2ea7df02176b5c6de134b32fec64.
